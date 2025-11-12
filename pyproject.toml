@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "spoe-forge"
+version = "0.0.1"
+description = "Pure Python SPOE Agents"
+authors = [
+    "Mike O'Donnell <mike@devferret.com>",
+]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.13"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^4.1.0"
+ruff = "0.14.2"
