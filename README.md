@@ -45,32 +45,18 @@ For a more venerable package - I would defer to the existing [GO Implementation]
 
 ## Quick Start
 
-### Installation
-
-**Current (Early Version):**
-```bash
-# Clone the repository
-git clone https://github.com/mwodonnell/spoe-forge
-cd spoe-forge
-
-# Install dependencies
-poetry install
-```
-
-**Future (Package Release):**
-```bash
-# Will be available via pip
-pip install spoe-forge
-```
-
 ### Basic Example
 
 ```python
-from spoe_forge.agent import Agent, AgentContext, SetVarAction, ActionScope
-from spoe_forge.server import SpoeForge
+from spoe_forge import (
+    SpoeForge,
+    AgentContext,
+    SetVarAction,
+    ActionScope
+)
 
 # Create an agent
-agent = Agent(name="my-agent")
+agent = SpoeForge(name="my-agent", debug=False)
 
 # Register a message handler
 @agent.message("check-request")
@@ -95,19 +81,13 @@ def handle_request(ctx: AgentContext) -> list[SetVarAction]:
 
 # Start the server
 if __name__ == "__main__":
-    forge = SpoeForge(agent, max_frame_size=16384)
-    forge.run(host="0.0.0.0", port=12345)
+    agent.run(host="0.0.0.0", port=12345)
 ```
 
 ### HAProxy Configuration
 
 SPOE Forge works with HAProxy's SPOE configuration. For details on configuring HAProxy to communicate with your
-agent, see the [official HAProxy SPOE documentation]https://www.haproxy.org/download/3.3/doc/SPOE.txt).
-
-## Examples
-
-- **[Minimal Example](examples/minimal_example.md)** - A simple "Hello World" style implementation
-- **[Practical Example](examples/practical_example.md)** - Real-world use cases including IP blocking and rate limiting
+agent, see the [official HAProxy SPOE documentation](https://www.haproxy.org/download/3.3/doc/SPOE.txt).
 
 ## Supported Data Types
 
@@ -130,49 +110,6 @@ Set variables at different HAProxy scopes:
 - `ActionScope.TRANSACTION` - Request/response transaction
 - `ActionScope.REQUEST` - Current request only
 - `ActionScope.RESPONSE` - Current response only
-
-## Production Use
-
-SPOE Forge is currently deployed in production on AWS ECS, powering a Google OAuth2 authentication layer for
-AProxy. The framework handles:
-
-- Complex stateful authentication flows
-- Multiple message types and handlers
-- High-volume production traffic
-- Docker containerization
-- Health check monitoring
-
-## Architecture
-
-SPOE Forge uses a three-layer architecture:
-
-1. **Agent Layer** - User-facing decorator API (`spoe_forge.agent`)
-2. **Server Layer** - TCP connection and lifecycle management (`spoe_forge.server`)
-3. **SPOP Layer** - Protocol encoding/decoding (`spoe_forge.spop`)
-
-This separation ensures clean abstractions and makes the framework easy to understand and extend.
-
-## Requirements
-
-- Python 3.12+
-- asyncio support
-- Poetry for dependency management (development)
-
-## Development
-
-```bash
-# Install with dev dependencies
-poetry install --with dev
-
-# Install pre-commit hooks
-pre-commit install
-
-# Run linting
-ruff check --fix .
-
-# Run formatting
-ruff format .
-```
 
 ## Protocol Reference
 
