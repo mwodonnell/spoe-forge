@@ -10,7 +10,7 @@ from spoe_forge.spop.exception import SpopDecodeError
 from spoe_forge.spop.spop_types import SpoaDataType
 from spoe_forge.spop.spop_types import SpoaDec
 
-logger = logging.getLogger("spoe-forge.decoder")
+logger = logging.getLogger(__name__)
 
 
 async def _parse_varint(buf: bytes, offset=0) -> SpoaDec[int]:

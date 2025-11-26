@@ -7,7 +7,7 @@ from spoe_forge.spop.constants import DataType
 from spoe_forge.spop.exception import SpopEncodeError
 from spoe_forge.spop.spop_types import SpoaDataType
 
-logger = logging.getLogger('"spoe-forge.encoder')
+logger = logging.getLogger(__name__)
 
 
 async def _compose_varint(val: int) -> bytes:

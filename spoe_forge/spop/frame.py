@@ -3,6 +3,7 @@ from abc import ABC
 from abc import abstractmethod
 from asyncio import IncompleteReadError
 from asyncio import StreamReader
+from typing import Callable
 from typing import ClassVar
 from typing import Type
 
@@ -22,13 +23,12 @@ from spoe_forge.spop.encoders.payloads import encode_metadata
 from spoe_forge.spop.exception import SpopDecodeError
 from spoe_forge.spop.exception import SpopEncodeError
 from spoe_forge.spop.exception import SpopEOFError
-from spoe_forge.spop.spop_types import Action
+from spoe_forge.spop.spop_types import Action, Messages
 from spoe_forge.spop.spop_types import Flags
 from spoe_forge.spop.spop_types import MetaData
-from spoe_forge.spop.spop_types import SpoaDataType
 from spoe_forge.spop.spop_types import SpoaDec
 
-logger = logging.getLogger("spoe-forge.frame")
+logger = logging.getLogger(__name__)
 
 
 class Frame(ABC):
@@ -57,7 +57,7 @@ class Frame(ABC):
         self.metadata = metadata
 
     @classmethod
-    def register(cls, *frame_types: FrameType):
+    def register(cls, *frame_types: FrameType) -> Callable:
         """
         Register frame type(s) with a Frame subclass.
 
@@ -459,7 +459,7 @@ class Notify(Frame):
                   {message_name: {arg_name: arg_value}}
     """
 
-    messages: dict[str, dict[str, SpoaDataType]]
+    messages: Messages
 
     async def encode_payload(self) -> bytes:
         return await encode_message_list(self.messages)

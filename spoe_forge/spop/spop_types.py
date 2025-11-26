@@ -20,6 +20,8 @@ SpoaDataType: TypeAlias = (
     int | bool | ipaddress.IPv4Address | ipaddress.IPv6Address | bytes | str | None
 )
 
+Messages: TypeAlias = dict[str, dict[str, SpoaDataType]]
+
 
 @dataclass
 class Flags:

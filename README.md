@@ -30,8 +30,7 @@ Python implementations of the SPOA protocol led to the development of this frame
 being prepared for open-source release to help the community build SPOA agents more easily.
 
 While python is not the goto for network level projects - it's enough in certain applications.
-For a more venerable package - I would defer to the more venerable
-[GO Implementation](https://github.com/negasus/haproxy-spoe-go).
+For a more venerable package - I would defer to the existing [GO Implementation](https://github.com/negasus/haproxy-spoe-go).
 
 
 ### Key Features
