@@ -2,7 +2,7 @@ import logging
 
 from spoe_forge.spop.spop_types import SpoaDataType
 
-logger = logging.getLogger("spoe_forge.agent")
+logger = logging.getLogger(__name__)
 
 
 class AgentContext:

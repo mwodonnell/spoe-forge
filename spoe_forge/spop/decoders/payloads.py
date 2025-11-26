@@ -14,7 +14,7 @@ from spoe_forge.spop.spop_types import MetaData
 from spoe_forge.spop.spop_types import SpoaDataType
 from spoe_forge.spop.spop_types import SpoaDec
 
-logger = logging.getLogger("spoe-forge.decoder")
+logger = logging.getLogger(__name__)
 
 
 async def _parse_kv_pair(buf: bytes, offset=0) -> tuple[str, SpoaDataType, int]:

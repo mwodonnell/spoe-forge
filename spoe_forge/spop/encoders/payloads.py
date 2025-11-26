@@ -9,10 +9,16 @@ from spoe_forge.spop.encoders.data_types import encode_int
 from spoe_forge.spop.encoders.data_types import encode_string
 from spoe_forge.spop.encoders.data_types import encode_tiny_int
 from spoe_forge.spop.exception import SpopEncodeError
-from spoe_forge.spop.spop_types import MetaData, Action, SetVarAction, UnsetVarAction
+from spoe_forge.spop.spop_types import (
+    MetaData,
+    Action,
+    SetVarAction,
+    UnsetVarAction,
+    Messages,
+)
 from spoe_forge.spop.spop_types import SpoaDataType
 
-logger = logging.getLogger("spoe-forge.encoder")
+logger = logging.getLogger(__name__)
 
 
 async def _compose_kv_pair(k: str, v: SpoaDataType) -> bytes:
@@ -109,7 +115,7 @@ async def encode_kv_list(payload: dict[str, SpoaDataType]) -> bytes:
     return bytes(out)
 
 
-async def encode_message_list(messages: dict[str, dict[str, SpoaDataType]]) -> bytes:
+async def encode_message_list(messages: Messages) -> bytes:
     """
     Encode message list for SPOA protocol.
 

@@ -1,8 +1,9 @@
 import logging
 from asyncio import StreamReader
 from asyncio import StreamWriter
+from typing import Callable
+from typing import Awaitable
 
-from spoe_forge.agent.agent import Agent
 from spoe_forge.exception import SpoeForgeError
 from spoe_forge.server.configuration import ServerConfiguration
 from spoe_forge.server.constants import DisconnectCode
@@ -12,8 +13,9 @@ from spoe_forge.spop.frame import Disconnect
 from spoe_forge.spop.frame import Frame
 from spoe_forge.spop.frame import HaproxyHello
 from spoe_forge.spop.frame import Notify
+from spoe_forge.spop.spop_types import Action, Messages
 
-logger = logging.getLogger("spoe-forge")
+logger = logging.getLogger(__name__)
 
 
 class ForgeHandler:
@@ -25,7 +27,7 @@ class ForgeHandler:
 
     def __init__(
         self,
-        agent: Agent,
+        notify_handler: Callable[[Messages], Awaitable[list[Action]]],
         config: ServerConfiguration,
         reader: StreamReader,
         writer: StreamWriter,
@@ -33,12 +35,12 @@ class ForgeHandler:
         """
         Initialize connection handler.
 
-        :param Agent agent: Agent instance to process messages
+        :param notify_handler: Callback from Forge to process Messages into Actions
         :param ServerConfiguration config: Configuration for this connection
         :param StreamReader reader: AsyncIO stream reader for connection
         :param StreamWriter writer: AsyncIO stream writer for connection
         """
-        self.agent = agent
+        self.notify_handler = notify_handler
         self.config = config
         self.reader = reader
         self.writer = writer
@@ -198,7 +200,7 @@ class ForgeHandler:
             )
             return False
 
-        actions = await self.agent.handle_notify(frame.messages)
+        actions = await self.notify_handler(frame.messages)
 
         ack = await Frame.construct(
             FrameType.ACK,

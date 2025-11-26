@@ -6,7 +6,7 @@ from spoe_forge.agent.context import AgentContext
 from spoe_forge.agent.exceptions import SpoeAgentError
 from spoe_forge.spop.spop_types import SpoaDataType, Action
 
-logger = logging.getLogger("spoe-forge.agent")
+logger = logging.getLogger(__name__)
 
 MessageHandlerFunc = Callable[[AgentContext], list[Action]]
 

@@ -5,7 +5,7 @@ from spoe_forge.server.constants import DEFAULT_MAX_FRAME_SIZE
 from spoe_forge.server.constants import SPOE_CAPABILITIES
 from spoe_forge.server.constants import SPOE_VERSION
 
-logger = logging.getLogger("spoe-forge")
+logger = logging.getLogger(__name__)
 
 
 class ServerConfiguration:
@@ -99,7 +99,7 @@ class ServerConfiguration:
         supported_versions: list[str],
         ha_max_frame_size: int,
         ha_capabilities: list[str],
-    ):
+    ) -> None:
         """
         Negotiate protocol compatibility with HAProxy.
 
@@ -130,6 +130,6 @@ class ServerConfiguration:
         return self._max_frame_size
 
     @property
-    def capabilities(self):
+    def capabilities(self) -> list[str]:
         """Get negotiated capabilities shared by server and HAProxy."""
         return self._capabilities
