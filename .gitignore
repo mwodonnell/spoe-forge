@@ -175,3 +175,6 @@ cython_debug/
 
 # Local test scripts
 **/test.py
+
+.claude
+CLAUDE.md
