@@ -17,3 +17,14 @@ ruff = "0.14.2"
 
 [tool.poetry.group.test.dependencies]
 pytest = "9.0.1"
+pytest-asyncio = "1.3.0"
+
+[pytest]
+testpaths = "tests"
+asyncio_mode = "auto"
+addopts = [
+    "--verbose",
+    "--cov=spoe_forge",
+    "--cov-report=term-missing",
+    "--cov-report=html"
+]
