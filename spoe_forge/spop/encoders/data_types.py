@@ -35,22 +35,17 @@ async def _compose_varint(val: int) -> bytes:
     if val < 240:
         return bytes([val])
 
-    val -= 240
-
     out = bytearray()
-    chunk = 0xF0 | (val & 0x0F)
-    out.append(chunk)
+    out.append((val | 0xF0) & 0xFF)
 
-    val >>= 4
-    while True:
-        chunk = val & 0x7F
-        val >>= 7
-        if val == 0:
-            out.append(chunk)
-            composed = bytes(out)
-            return composed
+    val = (val - 240) >> 4
+    while val >= 128:
+        out.append((val | 0x80) & 0xFF)
+        val = (val - 128) >> 7
 
-        out.append(0x80 | chunk)
+    # out.append(val & 0xFF)
+    out.append(val)
+    return bytes(out)
 
 
 async def _compose_binary(val: bytes) -> bytes:
