@@ -17,12 +17,27 @@ async def test_compose_varint(varint_case):
     assert num_bytes == len(encoded)
 
 
-@pytest.mark.parametrize("value", [-1, 4328786160])
 @pytest.mark.asyncio
-async def test_compose_varint_raises_error(value):
-    # Expected to raise an encode error as these are out of bounds
-    with pytest.raises(SpopEncodeError):
-        await data_type._compose_varint(value)
+async def test_compose_varint_raises_error_negative():
+    """Test that negative values raise an error."""
+    with pytest.raises(SpopEncodeError, match="cannot encode negative number"):
+        await data_type._compose_varint(-1)
+
+
+@pytest.mark.parametrize(
+    "value,expected_bytes",
+    [
+        # 6 bytes (39 bits): first value beyond old 5-byte limit
+        (4328786160, 6),
+        # 10 bytes (67 bits): max uint64 value
+        (18446744073709551615, 10),  # 2^64 - 1
+    ],
+)
+@pytest.mark.asyncio
+async def test_compose_varint_large_values(value, expected_bytes):
+    """Test that large values (>= 4328786160) can be encoded."""
+    result = await data_type._compose_varint(value)
+    assert len(result) == expected_bytes
 
 
 @pytest.mark.asyncio
@@ -164,7 +179,8 @@ async def test_encode_dt_int32():
             "spoe_forge.spop.encoders.data_types._type_data", new_callable=AsyncMock
         ) as mock_type,
         patch(
-            "spoe_forge.spop.encoders.data_types.encode_int", new_callable=AsyncMock
+            "spoe_forge.spop.encoders.data_types._compose_varint",
+            new_callable=AsyncMock,
         ) as mock_int,
     ):
         mock_type.return_value = b"\x02"
@@ -182,7 +198,8 @@ async def test_encode_dt_uint32():
             "spoe_forge.spop.encoders.data_types._type_data", new_callable=AsyncMock
         ) as mock_type,
         patch(
-            "spoe_forge.spop.encoders.data_types.encode_int", new_callable=AsyncMock
+            "spoe_forge.spop.encoders.data_types._compose_varint",
+            new_callable=AsyncMock,
         ) as mock_int,
     ):
         mock_type.return_value = b"\x03"
@@ -200,7 +217,8 @@ async def test_encode_dt_int64():
             "spoe_forge.spop.encoders.data_types._type_data", new_callable=AsyncMock
         ) as mock_type,
         patch(
-            "spoe_forge.spop.encoders.data_types.encode_int", new_callable=AsyncMock
+            "spoe_forge.spop.encoders.data_types._compose_varint",
+            new_callable=AsyncMock,
         ) as mock_int,
     ):
         mock_type.return_value = b"\x04"
@@ -218,7 +236,8 @@ async def test_encode_dt_uint64():
             "spoe_forge.spop.encoders.data_types._type_data", new_callable=AsyncMock
         ) as mock_type,
         patch(
-            "spoe_forge.spop.encoders.data_types.encode_int", new_callable=AsyncMock
+            "spoe_forge.spop.encoders.data_types._compose_varint",
+            new_callable=AsyncMock,
         ) as mock_int,
     ):
         mock_type.return_value = b"\x05"  # DataType.UINT64
