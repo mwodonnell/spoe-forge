@@ -1,3 +1,5 @@
+import ipaddress
+
 import pytest
 
 
@@ -66,4 +68,181 @@ def tiny_int_case(request):
 )
 def frame_len_case(request):
     """Provides (decoded, encoded, desc) for each param."""
+    return request.param
+
+
+@pytest.fixture(
+    # (Decoded val, Encoded val, Description)
+    params=[
+        (0, b"\x00\x00\x00\x00", "INT32: 0"),
+        (1, b"\x00\x00\x00\x01", "INT32: 1"),
+        (239, b"\x00\x00\x00\xef", "INT32: 239"),
+        (2147483647, b"\xff\xff\xff\xff\x7f", "INT32: max positive (2^31 - 1)"),
+        (-1, b"\xff\xff\xff\xff\x0f", "INT32: -1"),
+        (-2147483648, b"\x80\x80\x80\x80\x08", "INT32: min negative (-2^31)"),
+    ],
+    ids=lambda case: case[2],
+)
+def int32_case(request):
+    """Provides (decoded, encoded, desc) for INT32 test cases."""
+    return request.param
+
+
+@pytest.fixture(
+    # (Decoded val, Encoded val, Description)
+    params=[
+        (0, b"\x00", "UINT32: 0"),
+        (1, b"\x01", "UINT32: 1"),
+        (239, b"\xef", "UINT32: 239"),
+        (4294967295, b"\xff\xff\xff\xff\x0f", "UINT32: max (2^32 - 1)"),
+    ],
+    ids=lambda case: case[2],
+)
+def uint32_case(request):
+    """Provides (decoded, encoded, desc) for UINT32 test cases."""
+    return request.param
+
+
+@pytest.fixture(
+    # (Decoded val, Encoded val, Description)
+    params=[
+        (0, b"\x00", "INT64: 0"),
+        (1, b"\x01", "INT64: 1"),
+        (239, b"\xef", "INT64: 239"),
+        (
+            9223372036854775807,
+            b"\xff\xff\xff\xff\xff\xff\xff\xff\x7f",
+            "INT64: max positive (2^63 - 1)",
+        ),
+        (-1, b"\xff\xff\xff\xff\xff\xff\xff\xff\x0f", "INT64: -1"),
+        (
+            -9223372036854775808,
+            b"\x80\x80\x80\x80\x80\x80\x80\x80\x08",
+            "INT64: min negative (-2^63)",
+        ),
+    ],
+    ids=lambda case: case[2],
+)
+def int64_case(request):
+    """Provides (decoded, encoded, desc) for INT64 test cases."""
+    return request.param
+
+
+@pytest.fixture(
+    # (Decoded val, Encoded val, Description)
+    params=[
+        (0, b"\x00", "UINT64: 0"),
+        (1, b"\x01", "UINT64: 1"),
+        (239, b"\xef", "UINT64: 239"),
+        (
+            18446744073709551615,
+            b"\xff\xff\xff\xff\xff\xff\xff\xff\x0f",
+            "UINT64: max (2^64 - 1)",
+        ),
+    ],
+    ids=lambda case: case[2],
+)
+def uint64_case(request):
+    """Provides (decoded, encoded, desc) for UINT64 test cases."""
+    return request.param
+
+
+@pytest.fixture(
+    # (Decoded val, Encoded val, Description)
+    params=[
+        (ipaddress.IPv4Address("0.0.0.0"), b"\x00\x00\x00\x00", "IPv4: 0.0.0.0"),
+        (ipaddress.IPv4Address("127.0.0.1"), b"\x7f\x00\x00\x01", "IPv4: 127.0.0.1"),
+        (
+            ipaddress.IPv4Address("192.168.1.1"),
+            b"\xc0\xa8\x01\x01",
+            "IPv4: 192.168.1.1",
+        ),
+        (
+            ipaddress.IPv4Address("255.255.255.255"),
+            b"\xff\xff\xff\xff",
+            "IPv4: 255.255.255.255",
+        ),
+    ],
+    ids=lambda case: case[2],
+)
+def ipv4_case(request):
+    """Provides (decoded, encoded, desc) for IPv4 test cases."""
+    return request.param
+
+
+@pytest.fixture(
+    # (Decoded val, Encoded val, Description)
+    params=[
+        (
+            ipaddress.IPv6Address("::"),
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+            "IPv6: ::",
+        ),
+        (
+            ipaddress.IPv6Address("::1"),
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+            "IPv6: ::1",
+        ),
+        (
+            ipaddress.IPv6Address("2001:db8::1"),
+            b"\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+            "IPv6: 2001:db8::1",
+        ),
+        (
+            ipaddress.IPv6Address("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"),
+            b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff",
+            "IPv6: ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+        ),
+    ],
+    ids=lambda case: case[2],
+)
+def ipv6_case(request):
+    """Provides (decoded, encoded, desc) for IPv6 test cases."""
+    return request.param
+
+
+@pytest.fixture(
+    # (Decoded val, Encoded val, Description)
+    params=[
+        (b"", b"\x00", "Binary: empty"),
+        (b"\x00", b"\x01\x00", "Binary: single null byte"),
+        (b"hello", b"\x05hello", "Binary: 'hello'"),
+        (b"\xff\xfe\xfd", b"\x03\xff\xfe\xfd", "Binary: 3 bytes of data"),
+        (b"a" * 240, b"\xf0\x00" + b"a" * 240, "Binary: 240 bytes (varint size 2)"),
+    ],
+    ids=lambda case: case[2],
+)
+def binary_case(request):
+    """Provides (decoded, encoded, desc) for binary test cases."""
+    return request.param
+
+
+@pytest.fixture(
+    # (Decoded val, Encoded val, Description)
+    params=[
+        ("", b"\x00", "String: empty"),
+        ("hello", b"\x05hello", "String: 'hello'"),
+        ("test123", b"\x07test123", "String: 'test123'"),
+        ("a" * 239, b"\xef" + b"a" * 239, "String: 239 characters (varint size 1)"),
+    ],
+    ids=lambda case: case[2],
+)
+def string_case(request):
+    """Provides (decoded, encoded, desc) for string test cases."""
+    return request.param
+
+
+@pytest.fixture(
+    # (Decoded val, Encoded val, Description)
+    # Note: Bool values are encoded in the type byte itself
+    # DataType.BOOL (0x01) | DataFlag.BOOL_TRUE (0x10) = 0x11 for True
+    # DataType.BOOL (0x01) = 0x01 for False
+    params=[
+        (True, b"\x11", "Bool: True"),
+        (False, b"\x01", "Bool: False"),
+    ],
+    ids=lambda case: case[2],
+)
+def bool_case(request):
+    """Provides (decoded, encoded, desc) for boolean test cases."""
     return request.param

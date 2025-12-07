@@ -145,7 +145,7 @@ async def decode_bool(buf: bytes, offset=0) -> SpoaDec[bool]:
     :param offset: offset to start reading from
     :return: Tuple of the parsed boolean, and the adjusted offset
     """
-    if len(buf) < 1:
+    if offset >= len(buf):
         raise SpopDecodeError(
             "unexpected end of stream decoding boolean",
         )
@@ -236,6 +236,11 @@ async def auto_decode_var(buf: bytes, offset=0) -> SpoaDec[SpoaDataType]:
 
     val_type = buf[offset] & DataTypeMask.TYPE
     offset += 1
+
+    try:
+        val_type = DataType(val_type)
+    except ValueError:
+        raise SpopDecodeError(f"unknown data type {val_type}")
 
     logger.debug(f"Decoding typed var: type={DataType(val_type).name}")
 

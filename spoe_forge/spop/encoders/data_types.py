@@ -66,10 +66,10 @@ async def _type_data(data_type: DataType, flags: int = 0x00) -> bytes:
     Booleans encode their value within the flags.
 
     :param DataType data_type: Data type to encode
-    :param int flags: Flags to encode (default 0x00)
+    :param int flags: Flags to encode (default 0x00) - should already be positioned in high nibble
     :return: Encoded TYPE + FLAGS byte
     """
-    return (flags << 4 | data_type).to_bytes(1, byteorder="big")
+    return (flags | data_type).to_bytes(1, byteorder="big")
 
 
 async def encode_tiny_int(val: int) -> bytes:
@@ -173,7 +173,7 @@ async def encode_dt_uint64(val: int) -> bytes:
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    return await _type_data(DataType.INT64) + await encode_int(val)
+    return await _type_data(DataType.UINT64) + await encode_int(val)
 
 
 async def encode_dt_bool(val: bool) -> bytes:
@@ -252,11 +252,12 @@ async def auto_encode_dt_var(val: SpoaDataType) -> bytes:
     if val is None:
         result = await encode_dt_null()
 
+    elif isinstance(val, bool):
+        # Check bool before int since bool is a subclass of int in Python
+        result = await encode_dt_bool(val)
+
     elif isinstance(val, int):
         result = await encode_dt_int64(val)
-
-    elif isinstance(val, bool):
-        result = await encode_dt_bool(val)
 
     elif isinstance(val, ipaddress.IPv4Address):
         result = await encode_dt_ipv4(val)
