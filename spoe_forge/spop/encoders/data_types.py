@@ -43,7 +43,6 @@ async def _compose_varint(val: int) -> bytes:
         out.append((val | 0x80) & 0xFF)
         val = (val - 128) >> 7
 
-    # out.append(val & 0xFF)
     out.append(val)
     return bytes(out)
 
