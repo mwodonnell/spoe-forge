@@ -69,3 +69,5 @@ jobs:
           coverage run --source=spoe_forge -m pytest tests/
       - name: Coveralls
         uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
