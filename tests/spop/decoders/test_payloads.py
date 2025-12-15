@@ -1,5 +1,3 @@
-"""Tests for SPOP payload decoders."""
-
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
@@ -12,14 +10,8 @@ from spoe_forge.spop.spop_types import SetVarAction
 from spoe_forge.spop.spop_types import UnsetVarAction
 
 
-# ============================================================================
-# KV Pair Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_parse_kv_pair(kv_pair_case):
-    """Test _parse_kv_pair decodes key-value pairs correctly."""
     key, value, encoded, desc = kv_pair_case
 
     result_key, result_val, offset = await payload._parse_kv_pair(encoded, 0)
@@ -31,7 +23,6 @@ async def test_parse_kv_pair(kv_pair_case):
 
 @pytest.mark.asyncio
 async def test_parse_kv_pair_calls_lower_level_functions():
-    """Test that _parse_kv_pair calls decode_string and auto_decode_var."""
     test_buf = b"\x04test\x04\x2a"  # "test" -> 42
 
     with (
@@ -54,14 +45,8 @@ async def test_parse_kv_pair_calls_lower_level_functions():
         assert offset == 7
 
 
-# ============================================================================
-# Metadata Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_decode_metadata(metadata_case):
-    """Test decode_metadata decodes metadata correctly."""
     metadata_obj, encoded, desc = metadata_case
 
     result, offset = await payload.decode_metadata(encoded, 0)
@@ -75,14 +60,11 @@ async def test_decode_metadata(metadata_case):
 
 @pytest.mark.asyncio
 async def test_decode_metadata_calls_decode_int64():
-    """Test that decode_metadata calls decode_int64 for stream_id and frame_id."""
-    # FIN flag, stream_id=1, frame_id=2
     test_buf = b"\x00\x00\x00\x01\x01\x02"
 
     with patch(
         "spoe_forge.spop.decoders.payloads.decode_int64", new_callable=AsyncMock
     ) as mock_decode_int64:
-        # First call returns stream_id, second returns frame_id
         mock_decode_int64.side_effect = [(1, 5), (2, 6)]
 
         result, offset = await payload.decode_metadata(test_buf, 0)
@@ -94,8 +76,7 @@ async def test_decode_metadata_calls_decode_int64():
 
 @pytest.mark.asyncio
 async def test_decode_metadata_raises_on_short_buffer():
-    """Test decode_metadata raises error on buffer too short for flags."""
-    short_buf = b"\x00\x00"  # Only 2 bytes, need 4 for flags
+    short_buf = b"\x00\x00"
 
     with pytest.raises(SpopDecodeError, match="unexpected end of stream"):
         await payload.decode_metadata(short_buf, 0)
@@ -103,8 +84,6 @@ async def test_decode_metadata_raises_on_short_buffer():
 
 @pytest.mark.asyncio
 async def test_decode_metadata_raises_on_stream_id_error():
-    """Test decode_metadata re-raises errors from stream_id decoding."""
-    # Provide enough bytes for flags (4) but mock will fail
     test_buf = b"\x00\x00\x00\x01\xff\xff"
 
     with patch(
@@ -118,29 +97,21 @@ async def test_decode_metadata_raises_on_stream_id_error():
 
 @pytest.mark.asyncio
 async def test_decode_metadata_raises_on_frame_id_error():
-    """Test decode_metadata re-raises errors from frame_id decoding."""
-    test_buf = b"\x00\x00\x00\x01\x01"  # Valid flags and stream_id, but no frame_id
+    test_buf = b"\x00\x00\x00\x01\x01"
 
     with (
         patch(
             "spoe_forge.spop.decoders.payloads.decode_int64", new_callable=AsyncMock
         ) as mock_decode,
     ):
-        # First call succeeds (stream_id), second fails (frame_id)
         mock_decode.side_effect = [(1, 5), SpopDecodeError("test error")]
 
         with pytest.raises(SpopDecodeError, match="error decoding frame_id"):
             await payload.decode_metadata(test_buf, 0)
 
 
-# ============================================================================
-# KV List Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_decode_kv_list(kv_list_case):
-    """Test decode_kv_list decodes KV lists correctly."""
     kv_dict, encoded, desc = kv_list_case
 
     result, offset = await payload.decode_kv_list(encoded, 0, len(encoded))
@@ -151,7 +122,6 @@ async def test_decode_kv_list(kv_list_case):
 
 @pytest.mark.asyncio
 async def test_decode_kv_list_empty():
-    """Test decode_kv_list with empty list."""
     result, offset = await payload.decode_kv_list(b"", 0, 0)
 
     assert result == {}
@@ -160,7 +130,6 @@ async def test_decode_kv_list_empty():
 
 @pytest.mark.asyncio
 async def test_decode_kv_list_with_offset():
-    """Test decode_kv_list with non-zero offset."""
     buf = b"\xff\xff\x01a\x04\x01"  # Prefix + "a" -> 1
     result, offset = await payload.decode_kv_list(buf, 2, 6)
 
@@ -170,7 +139,6 @@ async def test_decode_kv_list_with_offset():
 
 @pytest.mark.asyncio
 async def test_decode_kv_list_calls_parse_kv_pair():
-    """Test that decode_kv_list calls _parse_kv_pair."""
     test_buf = b"\x01a\x04\x01\x01b\x04\x02"  # "a"->1, "b"->2
 
     with patch(
@@ -184,14 +152,8 @@ async def test_decode_kv_list_calls_parse_kv_pair():
         assert result == {"a": 1, "b": 2}
 
 
-# ============================================================================
-# Message List Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_decode_list_of_messages(message_list_case):
-    """Test decode_list_of_messages decodes message lists correctly."""
     messages_dict, encoded, desc = message_list_case
 
     result, offset = await payload.decode_list_of_messages(encoded, 0, len(encoded))
@@ -202,7 +164,6 @@ async def test_decode_list_of_messages(message_list_case):
 
 @pytest.mark.asyncio
 async def test_decode_list_of_messages_empty():
-    """Test decode_list_of_messages with empty list."""
     result, offset = await payload.decode_list_of_messages(b"", 0, 0)
 
     assert result == {}
@@ -211,7 +172,6 @@ async def test_decode_list_of_messages_empty():
 
 @pytest.mark.asyncio
 async def test_decode_list_of_messages_with_offset():
-    """Test decode_list_of_messages with non-zero offset."""
     buf = b"\xff\xff\x04test\x00"  # Prefix + "test" with no args
     result, offset = await payload.decode_list_of_messages(buf, 2, 8)
 
@@ -221,7 +181,6 @@ async def test_decode_list_of_messages_with_offset():
 
 @pytest.mark.asyncio
 async def test_decode_list_of_messages_calls_lower_level_functions():
-    """Test that decode_list_of_messages calls decode_string, decode_tiny_int, and _parse_kv_pair."""
     test_buf = b"\x04test\x01\x01a\x04\x01"  # "test" with 1 arg: "a"->1
 
     with (
@@ -249,22 +208,14 @@ async def test_decode_list_of_messages_calls_lower_level_functions():
 
 @pytest.mark.asyncio
 async def test_decode_list_of_messages_raises_on_duplicate_arg():
-    """Test decode_list_of_messages raises error on duplicate argument."""
-    # "test" with 2 args, both named "dup"
     test_buf = b"\x04test\x02\x03dup\x04\x01\x03dup\x04\x02"
 
     with pytest.raises(SpopDecodeError, match="unexpected duplicate arg"):
         await payload.decode_list_of_messages(test_buf, 0, len(test_buf))
 
 
-# ============================================================================
-# Action List Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_decode_list_of_actions_set_var(action_case):
-    """Test decode_list_of_actions decodes actions correctly."""
     action_obj, encoded, desc = action_case
 
     result, offset = await payload.decode_list_of_actions(encoded, 0, len(encoded))
@@ -280,8 +231,6 @@ async def test_decode_list_of_actions_set_var(action_case):
 
 @pytest.mark.asyncio
 async def test_decode_list_of_actions_empty():
-    """Test decode_list_of_actions with empty list."""
-    # Special case: empty action lists can be signaled by buf length == end + 1
     result, offset = await payload.decode_list_of_actions(b"\x00", 0, 0)
 
     assert result == []
@@ -290,8 +239,6 @@ async def test_decode_list_of_actions_empty():
 
 @pytest.mark.asyncio
 async def test_decode_list_of_actions_multiple():
-    """Test decode_list_of_actions with multiple actions."""
-    # SetVar(session, "a", 1) + UnsetVar(request, "b")
     test_buf = b"\x01\x03\x01\x01a\x04\x01\x02\x02\x03\x01b"
 
     result, offset = await payload.decode_list_of_actions(test_buf, 0, len(test_buf))
@@ -309,7 +256,6 @@ async def test_decode_list_of_actions_multiple():
 
 @pytest.mark.asyncio
 async def test_decode_list_of_actions_calls_parse_kv_pair_for_set_var():
-    """Test that decode_list_of_actions calls _parse_kv_pair for SET_VAR."""
     test_buf = b"\x01\x03\x02\x01a\x04\x01"  # SetVar(session, "a", 1)
 
     with patch(
@@ -328,7 +274,6 @@ async def test_decode_list_of_actions_calls_parse_kv_pair_for_set_var():
 
 @pytest.mark.asyncio
 async def test_decode_list_of_actions_calls_decode_string_for_unset_var():
-    """Test that decode_list_of_actions calls decode_string for UNSET_VAR."""
     test_buf = b"\x02\x02\x02\x04temp"  # UnsetVar(session, "temp")
 
     with patch(
@@ -347,8 +292,7 @@ async def test_decode_list_of_actions_calls_decode_string_for_unset_var():
 
 @pytest.mark.asyncio
 async def test_decode_list_of_actions_raises_on_invalid_action_type():
-    """Test decode_list_of_actions raises error on invalid action type."""
-    test_buf = b"\xff\x03\x02"  # Invalid action type 0xff
+    test_buf = b"\xff\x03\x02"
 
     with pytest.raises(SpopDecodeError, match="invalid action type"):
         await payload.decode_list_of_actions(test_buf, 0, len(test_buf))
@@ -356,8 +300,7 @@ async def test_decode_list_of_actions_raises_on_invalid_action_type():
 
 @pytest.mark.asyncio
 async def test_decode_list_of_actions_raises_on_invalid_scope():
-    """Test decode_list_of_actions raises error on invalid scope."""
-    test_buf = b"\x01\x03\xff"  # SET_VAR with invalid scope 0xff
+    test_buf = b"\x01\x03\xff"
 
     with pytest.raises(SpopDecodeError, match="invalid action scope"):
         await payload.decode_list_of_actions(test_buf, 0, len(test_buf))
@@ -365,8 +308,6 @@ async def test_decode_list_of_actions_raises_on_invalid_scope():
 
 @pytest.mark.asyncio
 async def test_decode_list_of_actions_raises_on_unknown_action():
-    """Test decode_list_of_actions raises error on unknown action type."""
-    # Use action type 0x03 (not SET_VAR or UNSET_VAR)
     test_buf = b"\x03\x03\x02"
 
     with pytest.raises(SpopDecodeError, match="invalid action type"):

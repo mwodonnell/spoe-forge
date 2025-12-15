@@ -1,5 +1,3 @@
-"""Tests for SPOP payload encoders."""
-
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
@@ -8,18 +6,14 @@ import pytest
 from spoe_forge.spop.constants import ActionScope
 from spoe_forge.spop.encoders import payloads as payload
 from spoe_forge.spop.exception import SpopEncodeError
+from spoe_forge.spop.spop_types import Flags
+from spoe_forge.spop.spop_types import MetaData
 from spoe_forge.spop.spop_types import SetVarAction
 from spoe_forge.spop.spop_types import UnsetVarAction
 
 
-# ============================================================================
-# KV Pair Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_compose_kv_pair(kv_pair_case):
-    """Test _compose_kv_pair encodes key-value pairs correctly."""
     key, value, encoded, desc = kv_pair_case
 
     result = await payload._compose_kv_pair(key, value)
@@ -29,7 +23,6 @@ async def test_compose_kv_pair(kv_pair_case):
 
 @pytest.mark.asyncio
 async def test_compose_kv_pair_calls_lower_level_functions():
-    """Test that _compose_kv_pair calls encode_string and auto_encode_dt_var."""
     with (
         patch(
             "spoe_forge.spop.encoders.payloads.encode_string", new_callable=AsyncMock
@@ -49,14 +42,8 @@ async def test_compose_kv_pair_calls_lower_level_functions():
         assert result == b"\x04test\x04\x2a"
 
 
-# ============================================================================
-# Metadata Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_encode_metadata(metadata_case):
-    """Test encode_metadata encodes metadata correctly."""
     metadata_obj, encoded, desc = metadata_case
 
     result = await payload.encode_metadata(metadata_obj)
@@ -66,10 +53,6 @@ async def test_encode_metadata(metadata_case):
 
 @pytest.mark.asyncio
 async def test_encode_metadata_calls_encode_int():
-    """Test that encode_metadata calls encode_int for stream_id and frame_id."""
-    from spoe_forge.spop.spop_types import Flags
-    from spoe_forge.spop.spop_types import MetaData
-
     test_metadata = MetaData(
         flags=Flags(FIN=True, ABORT=False),
         stream_id=1,
@@ -90,10 +73,6 @@ async def test_encode_metadata_calls_encode_int():
 
 @pytest.mark.asyncio
 async def test_encode_metadata_fin_flag():
-    """Test encode_metadata correctly sets FIN flag."""
-    from spoe_forge.spop.spop_types import Flags
-    from spoe_forge.spop.spop_types import MetaData
-
     metadata = MetaData(
         flags=Flags(FIN=True, ABORT=False),
         stream_id=0,
@@ -102,16 +81,11 @@ async def test_encode_metadata_fin_flag():
 
     result = await payload.encode_metadata(metadata)
 
-    # FIN flag should be set in the last byte of flags
     assert result[3] == 0x01  # FrameFlag.FIN
 
 
 @pytest.mark.asyncio
 async def test_encode_metadata_abort_flag():
-    """Test encode_metadata correctly sets ABORT flag."""
-    from spoe_forge.spop.spop_types import Flags
-    from spoe_forge.spop.spop_types import MetaData
-
     metadata = MetaData(
         flags=Flags(FIN=False, ABORT=True),
         stream_id=0,
@@ -120,16 +94,11 @@ async def test_encode_metadata_abort_flag():
 
     result = await payload.encode_metadata(metadata)
 
-    # ABORT flag should be set in the last byte of flags
     assert result[3] == 0x02  # FrameFlag.ABORT
 
 
 @pytest.mark.asyncio
 async def test_encode_metadata_both_flags():
-    """Test encode_metadata correctly sets both FIN and ABORT flags."""
-    from spoe_forge.spop.spop_types import Flags
-    from spoe_forge.spop.spop_types import MetaData
-
     metadata = MetaData(
         flags=Flags(FIN=True, ABORT=True),
         stream_id=0,
@@ -138,18 +107,11 @@ async def test_encode_metadata_both_flags():
 
     result = await payload.encode_metadata(metadata)
 
-    # Both flags should be set in the last byte of flags
-    assert result[3] == 0x03  # FIN | ABORT
-
-
-# ============================================================================
-# KV List Tests
-# ============================================================================
+    assert result[3] == 0x03
 
 
 @pytest.mark.asyncio
 async def test_encode_kv_list(kv_list_case):
-    """Test encode_kv_list encodes KV lists correctly."""
     kv_dict, encoded, desc = kv_list_case
 
     result = await payload.encode_kv_list(kv_dict)
@@ -159,7 +121,6 @@ async def test_encode_kv_list(kv_list_case):
 
 @pytest.mark.asyncio
 async def test_encode_kv_list_empty():
-    """Test encode_kv_list with empty dict."""
     result = await payload.encode_kv_list({})
 
     assert result == b""
@@ -167,7 +128,6 @@ async def test_encode_kv_list_empty():
 
 @pytest.mark.asyncio
 async def test_encode_kv_list_calls_compose_kv_pair():
-    """Test that encode_kv_list calls _compose_kv_pair for each pair."""
     test_dict = {"a": 1, "b": 2}
 
     with patch(
@@ -181,14 +141,8 @@ async def test_encode_kv_list_calls_compose_kv_pair():
         assert result == b"\x01a\x04\x01\x01b\x04\x02"
 
 
-# ============================================================================
-# Message List Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_encode_message_list(message_list_case):
-    """Test encode_message_list encodes message lists correctly."""
     messages_dict, encoded, desc = message_list_case
 
     result = await payload.encode_message_list(messages_dict)
@@ -198,7 +152,6 @@ async def test_encode_message_list(message_list_case):
 
 @pytest.mark.asyncio
 async def test_encode_message_list_empty():
-    """Test encode_message_list with empty dict."""
     result = await payload.encode_message_list({})
 
     assert result == b""
@@ -206,7 +159,6 @@ async def test_encode_message_list_empty():
 
 @pytest.mark.asyncio
 async def test_encode_message_list_calls_lower_level_functions():
-    """Test that encode_message_list calls encode_string, encode_tiny_int, and _compose_kv_pair."""
     test_messages = {"test": {"a": 1}}
 
     with (
@@ -234,8 +186,6 @@ async def test_encode_message_list_calls_lower_level_functions():
 
 @pytest.mark.asyncio
 async def test_encode_message_list_raises_on_too_many_args():
-    """Test encode_message_list raises error when message has more than 255 args."""
-    # Create a message with 256 arguments
     large_message = {f"arg{i}": i for i in range(256)}
     messages = {"test": large_message}
 
@@ -243,14 +193,8 @@ async def test_encode_message_list_raises_on_too_many_args():
         await payload.encode_message_list(messages)
 
 
-# ============================================================================
-# Action Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_compose_action_set_var(action_case):
-    """Test _compose_action encodes actions correctly."""
     action_obj, encoded, desc = action_case
 
     result = await payload._compose_action(action_obj)
@@ -260,8 +204,6 @@ async def test_compose_action_set_var(action_case):
 
 @pytest.mark.asyncio
 async def test_compose_action_raises_on_unknown_type():
-    """Test _compose_action raises error on unknown action type."""
-
     class UnknownAction:
         pass
 
@@ -273,7 +215,6 @@ async def test_compose_action_raises_on_unknown_type():
 
 @pytest.mark.asyncio
 async def test_compose_set_action_calls_lower_level_functions():
-    """Test that _compose_set_action calls encode_string and auto_encode_dt_var."""
     action = SetVarAction(
         scope=ActionScope.SESSION,
         name="test",
@@ -300,7 +241,6 @@ async def test_compose_set_action_calls_lower_level_functions():
 
 @pytest.mark.asyncio
 async def test_compose_unset_action_calls_encode_string():
-    """Test that _compose_unset_action calls encode_string."""
     action = UnsetVarAction(
         scope=ActionScope.SESSION,
         name="test",
@@ -316,14 +256,8 @@ async def test_compose_unset_action_calls_encode_string():
         mock_encode_string.assert_called_once_with("test")
 
 
-# ============================================================================
-# Action List Tests
-# ============================================================================
-
-
 @pytest.mark.asyncio
 async def test_encode_action_list(action_list_case):
-    """Test encode_action_list encodes action lists correctly."""
     actions, encoded, desc = action_list_case
 
     result = await payload.encode_action_list(actions)
@@ -333,7 +267,6 @@ async def test_encode_action_list(action_list_case):
 
 @pytest.mark.asyncio
 async def test_encode_action_list_empty():
-    """Test encode_action_list with empty list."""
     result = await payload.encode_action_list([])
 
     assert result == b""
@@ -341,7 +274,6 @@ async def test_encode_action_list_empty():
 
 @pytest.mark.asyncio
 async def test_encode_action_list_calls_compose_action():
-    """Test that encode_action_list calls _compose_action for each action."""
     actions = [
         SetVarAction(scope=ActionScope.SESSION, name="a", value=1),
         UnsetVarAction(scope=ActionScope.REQUEST, name="b"),
@@ -363,7 +295,6 @@ async def test_encode_action_list_calls_compose_action():
 
 @pytest.mark.asyncio
 async def test_encode_action_list_multiple_set_vars():
-    """Test encode_action_list with multiple SetVarAction."""
     actions = [
         SetVarAction(scope=ActionScope.SESSION, name="x", value=1),
         SetVarAction(scope=ActionScope.REQUEST, name="y", value=2),
@@ -371,16 +302,13 @@ async def test_encode_action_list_multiple_set_vars():
 
     result = await payload.encode_action_list(actions)
 
-    # Verify structure: each action should have type, nb_args, scope, name, value
-    assert result.startswith(b"\x01\x03")  # First action: SET_VAR, 3 args
-    assert len(result) > 0  # Result should contain both actions
-    # Verify both actions are present by decoding and checking
-    assert b"\x01y\x04\x02" in result  # Second action contains name="y", value=2
+    assert result.startswith(b"\x01\x03")
+    assert len(result) > 0
+    assert b"\x01y\x04\x02" in result
 
 
 @pytest.mark.asyncio
 async def test_encode_action_list_multiple_unset_vars():
-    """Test encode_action_list with multiple UnsetVarAction."""
     actions = [
         UnsetVarAction(scope=ActionScope.SESSION, name="x"),
         UnsetVarAction(scope=ActionScope.REQUEST, name="y"),
@@ -388,8 +316,6 @@ async def test_encode_action_list_multiple_unset_vars():
 
     result = await payload.encode_action_list(actions)
 
-    # Verify structure: each action should have type, nb_args, scope, name
-    assert result.startswith(b"\x02\x02")  # First action: UNSET_VAR, 2 args
-    assert len(result) > 0  # Result should contain both actions
-    # Verify both actions are present
-    assert b"\x01y" in result  # Second action contains name="y"
+    assert result.startswith(b"\x02\x02")
+    assert len(result) > 0
+    assert b"\x01y" in result
