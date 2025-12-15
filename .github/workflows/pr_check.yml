@@ -27,3 +27,20 @@ jobs:
         run: pre-commit install
       - name: Run pre-commit
         run: pre-commit run --all-files
+  coverage:
+    name: Coveralls Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install poetry
+        run: pip install "poetry==2.1.1"
+      - name: Install deps | Gen coverage
+        run: |
+          poetry install --with test
+          coverage run --source=spoe_forge -m pytest tests/
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
