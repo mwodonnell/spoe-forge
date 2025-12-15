@@ -30,6 +30,8 @@ jobs:
   coverage:
     name: Coveralls Coverage
     runs-on: ubuntu-latest
+    env:
+      POETRY_VIRTUALENVS_CREATE: "false"
     steps:
       - uses: actions/checkout@v4
       - name: Install Python
