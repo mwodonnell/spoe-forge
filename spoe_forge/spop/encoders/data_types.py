@@ -1,3 +1,4 @@
+import ctypes
 import ipaddress
 import logging
 import struct
@@ -20,6 +21,10 @@ async def _compose_varint(val: int) -> bytes:
         2288 <= X < 264432     : 3 bytes (18 bits)     [ 1111 XXXX ] [ 1XXX XXXX ]   [ 0XXX XXXX ]
       264432 <= X < 33818864   : 4 bytes (25 bits)     [ 1111 XXXX ] [ 1XXX XXXX ]*2 [ 0XXX XXXX ]
     33818864 <= X < 4328786160 : 5 bytes (32 bits)     [ 1111 XXXX ] [ 1XXX XXXX ]*3 [ 0XXX XXXX ]
+    ... pattern continues for larger values (up to 10 bytes for full 64-bit support)
+
+    The pattern continues: each additional byte adds 7 bits of data.
+    10 bytes total (4 + 7*9 = 67 bits) can encode the full uint64 range.
 
     :param int val: Integer value to encode
     :return: Encoded bytes
@@ -27,30 +32,19 @@ async def _compose_varint(val: int) -> bytes:
     if val < 0:
         raise SpopEncodeError(f"cannot encode negative number as varint: {val}")
 
-    if val >= 4328786160:
-        raise SpopEncodeError(
-            f"cannot encode number as varint: {val} - falls outside SPOP specification",
-        )
-
     if val < 240:
         return bytes([val])
 
-    val -= 240
-
     out = bytearray()
-    chunk = 0xF0 | (val & 0x0F)
-    out.append(chunk)
+    out.append((val | 0xF0) & 0xFF)
 
-    val >>= 4
-    while True:
-        chunk = val & 0x7F
-        val >>= 7
-        if val == 0:
-            out.append(chunk)
-            composed = bytes(out)
-            return composed
+    val = (val - 240) >> 4
+    while val >= 128:
+        out.append((val | 0x80) & 0xFF)
+        val = (val - 128) >> 7
 
-        out.append(0x80 | chunk)
+    out.append(val)
+    return bytes(out)
 
 
 async def _compose_binary(val: bytes) -> bytes:
@@ -71,10 +65,10 @@ async def _type_data(data_type: DataType, flags: int = 0x00) -> bytes:
     Booleans encode their value within the flags.
 
     :param DataType data_type: Data type to encode
-    :param int flags: Flags to encode (default 0x00)
+    :param int flags: Flags to encode (default 0x00) - should already be positioned in high nibble
     :return: Encoded TYPE + FLAGS byte
     """
-    return (flags << 4 | data_type).to_bytes(1, byteorder="big")
+    return (flags | data_type).to_bytes(1, byteorder="big")
 
 
 async def encode_tiny_int(val: int) -> bytes:
@@ -148,7 +142,14 @@ async def encode_dt_int32(val: int) -> bytes:
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    return await _type_data(DataType.INT32) + await encode_int(val)
+    # Convert signed to unsigned representation for varint encoding
+    try:
+        unsigned_val = ctypes.c_uint32(val).value
+    except ValueError:
+        raise SpopEncodeError(
+            f"cannot encode INT32 value to SPOP: {val!r}",
+        )
+    return await _type_data(DataType.INT32) + await _compose_varint(unsigned_val)
 
 
 async def encode_dt_int64(val: int) -> bytes:
@@ -158,7 +159,14 @@ async def encode_dt_int64(val: int) -> bytes:
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    return await _type_data(DataType.INT64) + await encode_int(val)
+    # Convert signed to unsigned representation for varint encoding
+    try:
+        unsigned_val = ctypes.c_uint64(val).value
+    except ValueError:
+        raise SpopEncodeError(
+            f"cannot encode INT64 value to SPOP: {val!r}",
+        )
+    return await _type_data(DataType.INT64) + await _compose_varint(unsigned_val)
 
 
 async def encode_dt_uint32(val: int) -> bytes:
@@ -168,7 +176,14 @@ async def encode_dt_uint32(val: int) -> bytes:
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    return await _type_data(DataType.UINT32) + await encode_int(val)
+    # Ensure value fits in uint32
+    try:
+        unsigned_val = ctypes.c_uint32(val).value
+    except ValueError:
+        raise SpopEncodeError(
+            f"cannot encode UINT32 value to SPOP: {val!r}",
+        )
+    return await _type_data(DataType.UINT32) + await _compose_varint(unsigned_val)
 
 
 async def encode_dt_uint64(val: int) -> bytes:
@@ -178,7 +193,14 @@ async def encode_dt_uint64(val: int) -> bytes:
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    return await _type_data(DataType.INT64) + await encode_int(val)
+    # Ensure value fits in uint64
+    try:
+        unsigned_val = ctypes.c_uint64(val).value
+    except ValueError:
+        raise SpopEncodeError(
+            f"cannot encode UINT64 value to SPOP: {val!r}",
+        )
+    return await _type_data(DataType.UINT64) + await _compose_varint(unsigned_val)
 
 
 async def encode_dt_bool(val: bool) -> bytes:
@@ -257,11 +279,12 @@ async def auto_encode_dt_var(val: SpoaDataType) -> bytes:
     if val is None:
         result = await encode_dt_null()
 
+    elif isinstance(val, bool):
+        # Check bool before int since bool is a subclass of int in Python
+        result = await encode_dt_bool(val)
+
     elif isinstance(val, int):
         result = await encode_dt_int64(val)
-
-    elif isinstance(val, bool):
-        result = await encode_dt_bool(val)
 
     elif isinstance(val, ipaddress.IPv4Address):
         result = await encode_dt_ipv4(val)

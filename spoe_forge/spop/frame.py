@@ -186,7 +186,7 @@ class Frame(ABC):
             )
         except KeyError as e:
             raise SpopDecodeError(
-                f"Not all expected k,v pairs found in {frame_type.name} payload: : {e}",
+                f"Not all expected k,v pairs found in {frame_type.name} payload: {e}",
             )
 
         if offset != frame_len:
@@ -217,12 +217,12 @@ class Frame(ABC):
         :return: Constructed Frame object
         :raises SpoeForgeError: If required payload arguments missing
         """
+        frame_class = await cls.get_frame_class(frame_type)
+
         logger.debug(
             f"Constructing {frame_type.name} frame: "
             f"stream_id={stream_id}, frame_id={frame_id}"
         )
-
-        frame_class = await cls.get_frame_class(frame_type)
 
         # SPOP dictates that fragmentation is no longer supported in 2.0+, therefore FIN is always set.
         # ABORT is very rarely if ever used from HAProxy - and Agents never set it themselves so we force it
@@ -300,7 +300,7 @@ class Frame(ABC):
         :param str items: Comma-separated string to parse
         :return: List of strings
         """
-        return [item.strip() for item in items.split(",")]
+        return [it for item in items.split(",") if (it := item.strip())]
 
 
 @Frame.register(FrameType.HAPROXY_HELLO)

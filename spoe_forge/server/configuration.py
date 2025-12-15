@@ -34,7 +34,7 @@ class ServerConfiguration:
         self._max_frame_size = (
             max_frame_size  # Set to default until negotiation complete
         )
-        self._server_compatible = False  # Set to false until negotiation complete
+        self._server_compatible = True
 
     async def _check_version_compatibility(self, ha_versions: list[str]):
         """
@@ -76,8 +76,6 @@ class ServerConfiguration:
             self._server_compatible = False
             return
 
-        self._server_compatible = True
-
     async def _find_common_capabilities(self, ha_capabilities: list[str]):
         """
         Find common capabilities between server and HAProxy.
@@ -92,7 +90,9 @@ class ServerConfiguration:
                 "Req/Resp cycles may be slower than they could be."
             )
 
-        self._server_compatible = True
+        # We don't set compatability here as pipelining is the only option available, and we support it w/o
+        # changes to the system - instead just log a warning that HAProxy won't take advantage of it and
+        # move on
 
     async def negotiate_server_compatibility(
         self,

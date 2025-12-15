@@ -71,9 +71,9 @@ class SpoeForge:
 
         def decorator(func: MessageHandlerFunc) -> MessageHandlerFunc:
             self._registry.register(message, func)
+            self._logger.debug(f"Registered handler for {message}")
             return func
 
-        self._logger.debug(f"Registered handler for {message}")
         return decorator
 
     async def _notify_handler(self, messages: Messages) -> list[Action]:

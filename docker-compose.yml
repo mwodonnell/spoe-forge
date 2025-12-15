@@ -1,0 +1,41 @@
+name: survey-write
+
+services:
+  spoa:
+    container_name: spoa
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    command: python sample_server.py
+    networks:
+      spoe:
+        ipv4_address: 172.16.0.10
+
+  haproxy:
+    image: haproxy
+    container_name: haproxy
+    ports:
+      - "8080:80"
+    volumes:
+      - "./docker:/usr/local/etc/haproxy"
+    networks:
+      - spoe
+
+  whoami:
+    image: traefik/whoami
+    container_name: whoami
+    command:
+       - --port=8000
+       - --name=iamfoo
+    networks:
+      spoe:
+        ipv4_address: 172.16.0.11
+
+
+networks:
+  spoe:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.0.0/16
+          gateway: 172.16.0.1

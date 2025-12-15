@@ -37,7 +37,7 @@ async def _compose_kv_pair(k: str, v: SpoaDataType) -> bytes:
     v_encoded = await auto_encode_dt_var(v)
     out.extend(v_encoded)
 
-    return out
+    return bytes(out)
 
 
 @singledispatch

@@ -8,7 +8,9 @@ from spoe_forge.spop.decoders.data_types import decode_int64
 from spoe_forge.spop.decoders.data_types import decode_string
 from spoe_forge.spop.decoders.data_types import decode_tiny_int
 from spoe_forge.spop.exception import SpopDecodeError
-from spoe_forge.spop.spop_types import Action, SetVarAction, UnsetVarAction
+from spoe_forge.spop.spop_types import Action
+from spoe_forge.spop.spop_types import SetVarAction
+from spoe_forge.spop.spop_types import UnsetVarAction
 from spoe_forge.spop.spop_types import Flags
 from spoe_forge.spop.spop_types import MetaData
 from spoe_forge.spop.spop_types import SpoaDataType
@@ -42,7 +44,7 @@ async def decode_metadata(buf: bytes, offset=0) -> SpoaDec[MetaData]:
     :return: Tuple of MetaData object and adjusted offset
     """
     end = offset + 4
-    if len(buf) < end + 1:
+    if end >= len(buf):
         raise SpopDecodeError(
             "unexpected end of stream decoding metadata",
         )
