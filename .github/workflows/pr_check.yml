@@ -17,35 +17,33 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install Python
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-      - name: Install pre-commit
-        run: pip install pre-commit==4.1.0
-      - name: Initialize pre-commit
-        run: pre-commit install
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install
+      - name: Install dependencies
+        run: uv sync --extra dev
       - name: Run pre-commit
-        run: pre-commit run --all-files
+        run: uv run pre-commit run --all-files
   pytest:
     name: Run PyTest
     runs-on: ubuntu-latest
-    env:
-      POETRY_VIRTUALENVS_CREATE: "false"
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Python
-        uses: actions/setup-python@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-      - name: Install poetry
-        run: pip install "poetry==2.1.1"
-      - name: Install deps
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install
+      - name: Install dependencies
+        run: uv sync --extra test
+      - name: Run pytest
         run: |
-          poetry install --with test
-      - name: PyTest
-        run: |
-          pytest \
+          uv run pytest \
             -ra \
             --strict-markers \
             --strict-config \
@@ -53,20 +51,19 @@ jobs:
   coverage:
     name: Coveralls Coverage
     runs-on: ubuntu-latest
-    env:
-      POETRY_VIRTUALENVS_CREATE: "false"
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Python
-        uses: actions/setup-python@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-      - name: Install poetry
-        run: pip install "poetry==2.1.1"
-      - name: Install deps | Gen coverage
-        run: |
-          poetry install --with test
-          coverage run --source=spoe_forge -m pytest tests/
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install
+      - name: Install dependencies
+        run: uv sync --extra test
+      - name: Generate coverage
+        run: uv run coverage run --source=spoe_forge -m pytest tests/
       - name: Coveralls
         uses: coverallsapp/github-action@v2
         with:
