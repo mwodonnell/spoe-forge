@@ -63,8 +63,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra test
       - name: Generate coverage
-        run: uv run coverage run --source=spoe_forge -m pytest tests/
+        run: uv run pytest
+      - name: Convert coverage to lcov
+        run: uv run coverage lcov -o coverage.lcov
       - name: Coveralls
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: coverage.lcov
