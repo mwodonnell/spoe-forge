@@ -11,18 +11,16 @@ logging.basicConfig(
 )
 
 agent = SpoeForge(name="sample-agent")
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("sample-spoe-server")
 
 
 @agent.message("test-ping")
 def ping(ctx: AgentContext):
-    return [SetVarAction(scope=ActionScope.REQUEST, name="spoe_arg", value=2289)]
-
-
-@agent.message("test-pong")
-def pong(ctx: AgentContext):
-    all_args = ctx.get_args()
-    logger.info(f"all_args: {all_args}")
+    return [
+        SetVarAction(
+            scope=ActionScope.REQUEST, name="spoe_arg", value="Hello from SPOE Forge"
+        )
+    ]
 
 
 agent.run(host="0.0.0.0", port=8500)

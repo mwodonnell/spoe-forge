@@ -73,20 +73,60 @@ if __name__ == "__main__":
     agent.run(host="0.0.0.0", port=12345)
 ```
 
-For a live example - there is a [Dockerfile](Dockerfile) and [docker-compose.yml](docker-compose.yml) provided to stand
-up a test server. I owe you more docs on that.
-
 ### HAProxy Configuration
 
 SPOE Forge works with HAProxy's SPOE configuration. For details on configuring HAProxy to communicate with your
 agent, see the [official HAProxy SPOE documentation](https://www.haproxy.org/download/3.3/doc/SPOE.txt).
 
+## Local Development
+
+### Running with Docker
+
+A complete local development environment is provided using Docker Compose, including a sample SPOE agent,
+HAProxy, and a test backend service.
+
+**Quick start:**
+
+```bash
+cd docker
+docker compose up --build
+```
+
+This starts three services:
+- **SPOA Agent** (`spoa`) - Sample SPOE Forge agent running on port 8500
+- **Whoami** (`whoami`) - Simple backend service for testing
+- **HAProxy** (`haproxy`) - Configured to communicate with the WhoAmI example BE Service, the SPOA agent, and is listening on port 8080
+
+**Test the setup:**
+
+```bash
+# Open logs
+docker compose logs
+
+# Visit the dev url in your browser
+http://localhost:8080
+```
+
+Check both the docker logs and the `X-Test-Arg` header displayed on the WhoAmI page.
+
+Make any updates to the HAProxy configs or the sample_server.py files in `./docker/` to support
+your testing.
+
+**Rebuild after changes:**
+
+```bash
+# Rebuild and restart the SPOA agent
+docker compose up --build spoa
+
+# Or rebuild everything
+docker compose up --build
+```
+
 ## Roadmap
 
 Future enhancements under consideration with no timeline guaranteed:
 
-- Middleware system for cross-cutting concerns
-- More robust tools for local testing
+- Middleware support
 - Much more extended documentation and examples
 
 ## License
