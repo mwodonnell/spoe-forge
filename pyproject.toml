@@ -39,10 +39,11 @@ test = [
     "pytest-asyncio==1.3.0",
     "coveralls==4.0.2",
     "coverage==7.13.0",
+    "pytest-cov==7.0.0",
 ]
 
-[pytest]
-testpaths = "tests"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = [
     "--verbose",
