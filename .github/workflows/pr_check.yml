@@ -27,8 +27,8 @@ jobs:
         run: uv sync --extra dev
       - name: Run pre-commit
         run: uv run pre-commit run --all-files
-  pytest:
-    name: Run PyTest
+  test:
+    name: Run Tests & Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -41,32 +41,16 @@ jobs:
         run: uv python install
       - name: Install dependencies
         run: uv sync --extra test
-      - name: Run pytest
+      - name: Run pytest with coverage
         run: |
           uv run pytest \
             -ra \
             --strict-markers \
             --strict-config \
-            --maxfail=1 \
-  coverage:
-    name: Coveralls Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: Set up Python
-        run: uv python install
-      - name: Install dependencies
-        run: uv sync --extra test
-      - name: Generate coverage
-        run: uv run pytest
+            --maxfail=1
       - name: Convert coverage to lcov
         run: uv run coverage lcov -o coverage.lcov
-      - name: Coveralls
+      - name: Upload to Coveralls
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
