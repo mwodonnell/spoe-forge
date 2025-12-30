@@ -12,7 +12,7 @@ on:
 
 jobs:
   validate-version:
-    name: Validate version has .dev suffix
+    name: Validate .dev expectation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
