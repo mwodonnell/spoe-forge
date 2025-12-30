@@ -52,7 +52,7 @@ jobs:
 
           git add pyproject.toml
           git commit -m "Release $VERSION [skip ci]"
-          git push origin main
+          git push origin HEAD:main
 
       - name: Build package
         run: uv build
