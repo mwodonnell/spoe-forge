@@ -8,7 +8,7 @@ module-root = ""
 
 [project]
 name = "spoe-forge"
-version = "0.0.1.dev"
+version = "0.0.3.dev"
 description = "A pure Python framework for building HAProxy SPOE agents"
 authors = [
     {name = "Mike O'Donnell", email = "mike@devferret.com"},
@@ -18,7 +18,7 @@ license = {text = "MIT"}
 requires-python = ">=3.12"
 keywords = ["haproxy", "spoe", "spoa", "spop"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
