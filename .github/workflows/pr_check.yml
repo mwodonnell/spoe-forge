@@ -11,6 +11,33 @@ on:
       - main
 
 jobs:
+  validate-version:
+    name: Validate version has .dev suffix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check version has .dev suffix
+        run: |
+          VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2)
+          echo "Found version: $VERSION"
+
+          if [[ ! "$VERSION" =~ \.dev$ ]]; then
+            echo "❌ ERROR: Version in pyproject.toml must end with .dev suffix"
+            echo ""
+            echo "Current version: $VERSION"
+            echo "Expected format: X.Y.Z.dev (e.g., 0.0.1.dev)"
+            echo ""
+            echo "The .dev suffix indicates unreleased code in the main branch."
+            echo "This suffix is automatically removed during the release process."
+            echo ""
+            echo "Please update pyproject.toml to include the .dev suffix."
+            exit 1
+          fi
+
+          echo "✅ Version validation passed: $VERSION"
+
   lint:
     name: Run pre-commit hooks
     runs-on: ubuntu-latest

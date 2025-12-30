@@ -13,13 +13,6 @@ SPOE Forge provides a clean, decorator-based API for creating agents that proces
 actions. Built with async/await throughout, it's designed for high-performance production environments. *Or at least as
 performant as python will allow.*
 
-### Status
-
-Early alpha version, feature-complete according to most recent SPOE documentation and running in
-production. Still going through initial testing/deployment to PyPi.
-
-Future development planned as use cases/limitations arise. Intended to be a long-lived python project.
-
 ### Why SPOE Forge?
 
 Originally created to power a Google OAuth2 authentication backend for HAProxy, it became clear the project
@@ -31,6 +24,14 @@ was a lack of well-maintained, easily understood implementations of the SPOA pro
 - **Simple decorator-based API** - Register message handlers with `@agent.message()`
 - **Full SPOP protocol support** - Complete implementation of the SPOA protocol
 - **Health check support** - Built-in HAProxy health check handling
+
+## Installation
+
+Install from PyPI:
+
+```bash
+pip install spoe-forge
+```
 
 ## Quick Start
 
@@ -112,16 +113,6 @@ Check both the docker logs and the `X-Test-Arg` header displayed on the WhoAmI p
 Make any updates to the HAProxy configs or the sample_server.py files in `./docker/` to support
 your testing.
 
-**Rebuild after changes:**
-
-```bash
-# Rebuild and restart the SPOA agent
-docker compose up --build spoa
-
-# Or rebuild everything
-docker compose up --build
-```
-
 ## Roadmap
 
 Future enhancements under consideration with no timeline guaranteed:
@@ -139,7 +130,7 @@ Any and all contributions welcome.
 
 ## Support
 
-For issues and questions, please file an issue on the GitHub repository once it's made public.
+For issues and questions, please [file an issue on GitHub](https://github.com/mwodonnell/spoe-forge/issues).
 
 ## Acknowledgments
 

@@ -418,7 +418,7 @@ wheels = [
 
 [[package]]
 name = "spoe-forge"
-version = "0.1.0a2"
+version = "0.0.1.dev"
 source = { editable = "." }
 
 [package.optional-dependencies]
