@@ -1,4 +1,4 @@
-name: survey-write
+name: spoe-forge
 
 services:
   spoa:
@@ -7,6 +7,12 @@ services:
       context: ../
       dockerfile: ./docker/Dockerfile
     command: uv run python ./docker/sample_server.py
+    healthcheck:
+      test: ["CMD", "uv", "run", "spoe-forge", "healthcheck", "--host", "127.0.0.1", "--port", "8500", "--quiet"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     networks:
       spoe:
         ipv4_address: 172.16.0.10
