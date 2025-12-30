@@ -179,3 +179,4 @@ cython_debug/
 .claude
 CLAUDE.md
 .thoughts/
+coverage.lcov

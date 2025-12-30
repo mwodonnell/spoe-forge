@@ -1,6 +1,6 @@
 # SPOE Forge
 
-A production-ready Python framework for building SPOE (Stream Processing Offload Engine) agents that communicate
+A pure Python framework for building SPOE (Stream Processing Offload Engine) agents that communicate
 with HAProxy using the SPOA protocol.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -13,36 +13,25 @@ SPOE Forge provides a clean, decorator-based API for creating agents that proces
 actions. Built with async/await throughout, it's designed for high-performance production environments. *Or at least as
 performant as python will allow.*
 
-### Status
-
-Early version, feature-complete according to most recent SPOE documentation and running in production. Will be
-published as a PyPI package in the future.
-
-Future development planned as use cases/limitations arise.
-
-Severely lacking unit tests right now - these will be added prior to first major PyPi release. Testing has been
-done on personal HAProxy deployment.
-
 ### Why SPOE Forge?
 
-This framework was created to power a production Google OAuth2 authentication system for HAProxy,
-where it currently handles real-world authentication flows on AWS ECS. The lack of well-maintained
-Python implementations of the SPOA protocol led to the development of this framework, which is now
-being prepared for open-source release to help the community build SPOA agents more easily.
-
-While python is not the goto for network level projects - it's enough in certain applications.
-For a more venerable package - I would defer to the existing [GO Implementation](https://github.com/negasus/haproxy-spoe-go).
-
+Originally created to power a Google OAuth2 authentication backend for HAProxy, it became clear the project
+could be converted to an abstracted framework. I noticed during the development of this project that there
+was a lack of well-maintained, easily understood implementations of the SPOA protocol in python.
 
 ### Key Features
 
 - **Simple decorator-based API** - Register message handlers with `@agent.message()`
 - **Full SPOP protocol support** - Complete implementation of the SPOA protocol
-- **Production-tested** - Currently running in production environments
-- **Async/await throughout** - Non-blocking I/O for high performance
-- **Type-safe** - Full type hints and IDE support
-- **Flexible action system** - Set/unset variables across different HAProxy scopes
 - **Health check support** - Built-in HAProxy health check handling
+
+## Installation
+
+Install from PyPI:
+
+```bash
+pip install spoe-forge
+```
 
 ## Quick Start
 
@@ -90,43 +79,46 @@ if __name__ == "__main__":
 SPOE Forge works with HAProxy's SPOE configuration. For details on configuring HAProxy to communicate with your
 agent, see the [official HAProxy SPOE documentation](https://www.haproxy.org/download/3.3/doc/SPOE.txt).
 
-## Supported Data Types
+## Local Development
 
-SPOE Forge supports all SPOA data types:
+### Running with Docker
 
-- `int` - Signed integers
-- `bool` - Boolean values
-- `str` - ASCII strings
-- `bytes` - Binary data
-- `ipaddress.IPv4Address` - IPv4 addresses
-- `ipaddress.IPv6Address` - IPv6 addresses
-- `None` - Null values
+A complete local development environment is provided using Docker Compose, including a sample SPOE agent,
+HAProxy, and a test backend service.
 
-## Action Scopes
+**Quick start:**
 
-Set variables at different HAProxy scopes:
+```bash
+cd docker
+docker compose up --build
+```
 
-- `ActionScope.PROCESS` - Process-wide variables
-- `ActionScope.SESSION` - Client session lifetime
-- `ActionScope.TRANSACTION` - Request/response transaction
-- `ActionScope.REQUEST` - Current request only
-- `ActionScope.RESPONSE` - Current response only
+This starts three services:
+- **SPOA Agent** (`spoa`) - Sample SPOE Forge agent running on port 8500
+- **Whoami** (`whoami`) - Simple backend service for testing
+- **HAProxy** (`haproxy`) - Configured to communicate with the WhoAmI example BE Service, the SPOA agent, and is listening on port 8080
 
-## Protocol Reference
+**Test the setup:**
 
-SPOE Forge implements the SPOA protocol as specified in the [HAProxy SPOE documentation](https://raw.githubusercontent.com/haproxy/haproxy/refs/tags/v3.2.0/doc/SPOE.txt).
+```bash
+# Open logs
+docker compose logs
+
+# Visit the dev url in your browser
+http://localhost:8080
+```
+
+Check both the docker logs and the `X-Test-Arg` header displayed on the WhoAmI page.
+
+Make any updates to the HAProxy configs or the sample_server.py files in `./docker/` to support
+your testing.
 
 ## Roadmap
 
-Future enhancements under consideration:
+Future enhancements under consideration with no timeline guaranteed:
 
-- Publish to PyPI for easy installation
-- Native async handler support
-- Middleware system for cross-cutting concerns
-- Message validation framework
-- Comprehensive test suite
-- CLI tools for local testing
-- Extended documentation and examples
+- Middleware support
+- Much more extended documentation and examples
 
 ## License
 
@@ -134,11 +126,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Contributing
 
-This project is in early stages and will be accepting contributions once published as a package. Stay tuned!
+Any and all contributions welcome.
 
 ## Support
 
-For issues and questions, please file an issue on the GitHub repository once it's made public.
+For issues and questions, please [file an issue on GitHub](https://github.com/mwodonnell/spoe-forge/issues).
 
 ## Acknowledgments
 
