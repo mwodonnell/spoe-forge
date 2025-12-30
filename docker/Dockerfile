@@ -10,17 +10,9 @@ WORKDIR /app
 
 RUN useradd --create-home --shell /bin/bash agent
 
-# Copy dependency files from project root
-COPY pyproject.toml uv.lock /app/
-
-# Install dependencies (skip installing the project itself for now)
-RUN uv sync --frozen --no-install-project --no-dev
-
-# Copy application code from project root
 COPY . /app/
 
-# Now install the project itself
-RUN uv sync --frozen --no-dev
+RUN uv sync
 
 RUN chown -R agent:agent /app
 
