@@ -5,7 +5,6 @@ from logging import Logger
 from functools import cached_property
 from typing import Callable
 
-from spoe_forge.agent.exceptions import SpoeAgentError
 
 from spoe_forge.log import create_logger
 from spoe_forge.server.configuration import ServerConfiguration
@@ -85,7 +84,6 @@ class SpoeForge:
 
         :param messages: Messages from NOTIFY frame
         :return: Aggregated list of actions from all handlers
-        :raises SpoeAgentError: If handler returns invalid type
         """
         actions = []
 
@@ -96,9 +94,11 @@ class SpoeForge:
                 handler_actions = []
 
             if not isinstance(handler_actions, list):
-                raise SpoeAgentError(
-                    f"Handler for message '{message}' did not return list or None. Received {type(handler_actions)}"
+                self._logger.error(
+                    f"Handler for message '{message}' did not return list or None. "
+                    f"Received {type(handler_actions)} - ignoring its actions"
                 )
+                handler_actions = []
 
             self._logger.info(
                 f"{self.name} handled '{message}', returned {len(handler_actions)} action(s)"

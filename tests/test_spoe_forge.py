@@ -6,7 +6,6 @@ from unittest.mock import patch
 import pytest
 
 from spoe_forge.agent.context import AgentContext
-from spoe_forge.agent.exceptions import SpoeAgentError
 from spoe_forge.server.constants import DEFAULT_MAX_FRAME_SIZE
 from spoe_forge.spoe_forge import SpoeForge
 from spoe_forge.spop.constants import ActionScope
@@ -169,7 +168,7 @@ async def test_notify_handler_handles_none_return():
 
 
 @pytest.mark.asyncio
-async def test_notify_handler_raises_on_invalid_return_type():
+async def test_notify_handler_ignores_invalid_return_type():
     forge = SpoeForge(name="test-agent")
 
     @forge.message("test-message")
@@ -178,8 +177,9 @@ async def test_notify_handler_raises_on_invalid_return_type():
 
     messages = [("test-message", {})]
 
-    with pytest.raises(SpoeAgentError, match="did not return list or None"):
-        await forge._notify_handler(messages)
+    actions = await forge._notify_handler(messages)
+
+    assert actions == []
 
 
 @pytest.mark.asyncio
@@ -201,7 +201,7 @@ async def test_notify_handler_logs_actions():
 
 
 @pytest.mark.asyncio
-async def test_notify_handler_passes_through_registry_exceptions():
+async def test_notify_handler_acks_empty_when_handler_raises():
     forge = SpoeForge(name="test-agent")
 
     @forge.message("test-message")
@@ -210,8 +210,27 @@ async def test_notify_handler_passes_through_registry_exceptions():
 
     messages = [("test-message", {})]
 
-    with pytest.raises(SpoeAgentError):
-        await forge._notify_handler(messages)
+    actions = await forge._notify_handler(messages)
+
+    assert actions == []
+
+
+@pytest.mark.asyncio
+async def test_notify_handler_isolates_failing_handler():
+    forge = SpoeForge(name="test-agent")
+
+    @forge.message("bad-message")
+    def bad_handler(ctx: AgentContext):
+        raise ValueError("boom")
+
+    @forge.message("good-message")
+    def good_handler(ctx: AgentContext):
+        return [SetVarAction(scope=ActionScope.SESSION, name="ok", value=1)]
+
+    actions = await forge._notify_handler([("bad-message", {}), ("good-message", {})])
+
+    assert len(actions) == 1
+    assert actions[0].name == "ok"
 
 
 @pytest.mark.asyncio
