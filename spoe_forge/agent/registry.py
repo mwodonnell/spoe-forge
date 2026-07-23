@@ -5,7 +5,6 @@ from collections.abc import Awaitable
 from typing import Callable
 
 from spoe_forge.agent.context import AgentContext
-from spoe_forge.agent.exceptions import SpoeAgentError
 from spoe_forge.spop.spop_types import SpoaDataType, Action
 
 logger = logging.getLogger(__name__)
@@ -46,10 +45,14 @@ class AgentRegistry:
         Async handlers are awaited on the event loop; synchronous handlers are
         wrapped with asyncio.to_thread so they can't block it.
 
+        A handler exception is logged and yields no actions - one failing
+        handler must not tear down the connection (and every other in-flight
+        stream pipelined on it). Protocol errors still disconnect as usual.
+
         :param str message: Message name to handle
         :param dict[str, SpoaDataType] args: Message arguments
-        :return: List of actions from handler (empty if no handler registered)
-        :raises SpoeAgentError: If handler raises an exception
+        :return: List of actions from handler (empty if no handler registered
+                 or the handler raised)
         """
         handler = self._handlers.get(message)
 
@@ -67,6 +70,4 @@ class AgentRegistry:
             logger.error(
                 f"Error in handler for message '{message}': {e}", exc_info=True
             )
-            # Convert to our own error - will be caught in our own handlers to
-            # cause a graceful kill of the connection
-            raise SpoeAgentError(e)
+            return []

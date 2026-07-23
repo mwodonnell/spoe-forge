@@ -18,9 +18,9 @@ robustness boundary (unbounded input, charset assumptions, silent truncation, ha
 | 3 | fix: range-check integer encoders | merged (PR #22) |
 | 4 | feat: support async message handlers | merged (PR #23) |
 | 5 | fix: keep decode errors within SpopDecodeError contract | merged (PR #24) |
-| 6 | refactor: Messages as ordered sequence (match SPOA prior art) | in review |
-| 7 | fix: compare SPOP versions as (major, minor) tuples | todo |
-| 8 | fix: handler failures ACK empty instead of disconnecting | todo |
+| 6 | refactor: Messages as ordered sequence (match SPOA prior art) | merged (PR #25) |
+| 7 | fix: compare SPOP versions as (major, minor) tuples | in review (bundled PR) |
+| 8 | fix: handler failures ACK empty instead of disconnecting | in review (bundled PR) |
 | 9 | feat: public serve(), ssl passthrough, clean shutdown | todo |
 | 10 | chore: packaging fixes + delete tracking docs | todo |
 

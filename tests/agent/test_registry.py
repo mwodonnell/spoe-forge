@@ -5,7 +5,6 @@ import pytest
 import ipaddress
 
 from spoe_forge.agent.context import AgentContext
-from spoe_forge.agent.exceptions import SpoeAgentError
 from spoe_forge.agent.registry import AgentRegistry
 from spoe_forge.spop.constants import ActionScope
 from spoe_forge.spop.spop_types import SetVarAction
@@ -132,7 +131,7 @@ async def test_handle_message_awaits_async_handler():
 
 
 @pytest.mark.asyncio
-async def test_handle_message_wraps_async_handler_exception():
+async def test_handle_message_logs_async_handler_exception():
     registry = AgentRegistry()
 
     async def handler(ctx: AgentContext):
@@ -140,9 +139,11 @@ async def test_handle_message_wraps_async_handler_exception():
 
     registry.register("test-message", handler)
 
-    with patch("spoe_forge.agent.registry.logger"):
-        with pytest.raises(SpoeAgentError):
-            await registry.handle_message("test-message", {})
+    with patch("spoe_forge.agent.registry.logger") as mock_logger:
+        result = await registry.handle_message("test-message", {})
+
+        assert result == []
+        mock_logger.error.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -177,7 +178,7 @@ async def test_handle_message_runs_handler_in_thread():
 
 
 @pytest.mark.asyncio
-async def test_handle_message_wraps_handler_exceptions():
+async def test_handle_message_returns_empty_on_handler_exception():
     registry = AgentRegistry()
 
     def handler(ctx: AgentContext):
@@ -186,15 +187,15 @@ async def test_handle_message_wraps_handler_exceptions():
     registry.register("test-message", handler)
 
     with patch("spoe_forge.agent.registry.logger") as mock_logger:
-        with pytest.raises(SpoeAgentError):
-            await registry.handle_message("test-message", {})
+        result = await registry.handle_message("test-message", {})
 
+        assert result == []
         mock_logger.error.assert_called_once()
         assert "Error in handler" in mock_logger.error.call_args[0][0]
 
 
 @pytest.mark.asyncio
-async def test_handle_message_preserves_original_exception():
+async def test_handle_message_logs_original_exception():
     registry = AgentRegistry()
 
     original_error = ValueError("Original error message")
@@ -204,10 +205,11 @@ async def test_handle_message_preserves_original_exception():
 
     registry.register("test-message", handler)
 
-    with pytest.raises(SpoeAgentError) as exc_info:
-        await registry.handle_message("test-message", {})
+    with patch("spoe_forge.agent.registry.logger") as mock_logger:
+        result = await registry.handle_message("test-message", {})
 
-    assert exc_info.value.args[0] == original_error
+        assert result == []
+        assert "Original error message" in mock_logger.error.call_args[0][0]
 
 
 @pytest.mark.asyncio
@@ -366,8 +368,8 @@ async def test_handler_exception_includes_message_name():
     registry.register("failing-message", handler)
 
     with patch("spoe_forge.agent.registry.logger") as mock_logger:
-        with pytest.raises(SpoeAgentError):
-            await registry.handle_message("failing-message", {})
+        result = await registry.handle_message("failing-message", {})
 
+        assert result == []
         error_call = mock_logger.error.call_args[0][0]
         assert "failing-message" in error_call
