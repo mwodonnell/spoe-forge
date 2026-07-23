@@ -318,7 +318,7 @@ async def test_handler_calls_core_handler():
 
 
 @pytest.mark.asyncio
-async def test_start_server_creates_asyncio_server():
+async def test_serve_creates_asyncio_server():
     forge = SpoeForge(name="test-agent")
 
     mock_server = AsyncMock()
@@ -328,7 +328,7 @@ async def test_start_server_creates_asyncio_server():
     with patch("spoe_forge.spoe_forge.asyncio.start_server") as mock_start_server:
         mock_start_server.return_value = mock_server
 
-        task = asyncio.create_task(forge._start_server("0.0.0.0", 12345))
+        task = asyncio.create_task(forge.serve("0.0.0.0", 12345))
 
         await asyncio.sleep(0.01)
 
@@ -339,11 +339,13 @@ async def test_start_server_creates_asyncio_server():
         except asyncio.CancelledError:
             pass
 
-        mock_start_server.assert_called_once_with(forge._handler, "0.0.0.0", 12345)
+        mock_start_server.assert_called_once_with(
+            forge._handler, "0.0.0.0", 12345, ssl=None
+        )
 
 
 @pytest.mark.asyncio
-async def test_start_server_logs_listening_address():
+async def test_serve_logs_listening_address():
     forge = SpoeForge(name="test-agent")
 
     mock_server = AsyncMock()
@@ -356,7 +358,7 @@ async def test_start_server_logs_listening_address():
     ):
         mock_start_server.return_value = mock_server
 
-        task = asyncio.create_task(forge._start_server("localhost", 9000))
+        task = asyncio.create_task(forge.serve("localhost", 9000))
         await asyncio.sleep(0.01)
         task.cancel()
 
@@ -367,6 +369,52 @@ async def test_start_server_logs_listening_address():
 
         mock_logger.info.assert_called_once()
         assert "localhost:9000" in mock_logger.info.call_args[0][0]
+
+
+@pytest.mark.asyncio
+async def test_serve_passes_ssl_context():
+    forge = SpoeForge(name="test-agent")
+
+    mock_server = AsyncMock()
+    mock_server.__aenter__ = AsyncMock(return_value=mock_server)
+    mock_server.__aexit__ = AsyncMock()
+    ssl_context = MagicMock()
+
+    with patch("spoe_forge.spoe_forge.asyncio.start_server") as mock_start_server:
+        mock_start_server.return_value = mock_server
+
+        task = asyncio.create_task(forge.serve("0.0.0.0", 12345, ssl=ssl_context))
+        await asyncio.sleep(0.01)
+        task.cancel()
+
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+        mock_start_server.assert_called_once_with(
+            forge._handler, "0.0.0.0", 12345, ssl=ssl_context
+        )
+
+
+def test_run_exits_cleanly_on_keyboard_interrupt():
+    forge = SpoeForge(name="test-agent")
+
+    with (
+        patch("spoe_forge.spoe_forge.asyncio.run") as mock_asyncio_run,
+        patch.object(forge, "_logger") as mock_logger,
+    ):
+
+        def mock_run(coro):
+            coro.close()
+            raise KeyboardInterrupt()
+
+        mock_asyncio_run.side_effect = mock_run
+
+        forge.run("0.0.0.0", 12345)
+
+        mock_logger.info.assert_called_once()
+        assert "shutting down" in mock_logger.info.call_args[0][0]
 
 
 def test_run_calls_asyncio_run():
