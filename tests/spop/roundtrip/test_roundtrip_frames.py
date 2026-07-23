@@ -18,7 +18,7 @@ from tests.utils import create_stream_reader
 async def test_roundtrip_haproxy_hello(haproxy_hello_data):
     frame_type, metadata, payload_kwargs, desc = haproxy_hello_data
 
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=frame_type,
         stream_id=metadata.stream_id,
         frame_id=metadata.frame_id,
@@ -47,7 +47,7 @@ async def test_roundtrip_haproxy_hello(haproxy_hello_data):
 async def test_roundtrip_agent_hello(agent_hello_data):
     frame_type, metadata, payload_kwargs, desc = agent_hello_data
 
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=frame_type,
         stream_id=metadata.stream_id,
         frame_id=metadata.frame_id,
@@ -73,7 +73,7 @@ async def test_roundtrip_agent_hello(agent_hello_data):
 async def test_roundtrip_disconnect(disconnect_data):
     frame_type, metadata, payload_kwargs, desc = disconnect_data
 
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=frame_type,
         stream_id=metadata.stream_id,
         frame_id=metadata.frame_id,
@@ -98,7 +98,7 @@ async def test_roundtrip_disconnect(disconnect_data):
 async def test_roundtrip_notify(notify_data):
     frame_type, metadata, payload_kwargs, desc = notify_data
 
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=frame_type,
         stream_id=metadata.stream_id,
         frame_id=metadata.frame_id,
@@ -122,7 +122,7 @@ async def test_roundtrip_notify(notify_data):
 async def test_roundtrip_ack(ack_data):
     frame_type, metadata, payload_kwargs, desc = ack_data
 
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=frame_type,
         stream_id=metadata.stream_id,
         frame_id=metadata.frame_id,
@@ -155,7 +155,7 @@ async def test_roundtrip_ack(ack_data):
 async def test_roundtrip_any_frame(any_frame_data):
     frame_type, metadata, payload_kwargs, desc = any_frame_data
 
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=frame_type,
         stream_id=metadata.stream_id,
         frame_id=metadata.frame_id,
@@ -175,7 +175,7 @@ async def test_roundtrip_any_frame(any_frame_data):
 
 @pytest.mark.asyncio
 async def test_roundtrip_haproxy_hello_multiple_versions():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,
@@ -195,7 +195,7 @@ async def test_roundtrip_haproxy_hello_multiple_versions():
 
 @pytest.mark.asyncio
 async def test_roundtrip_notify_with_complex_types():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.NOTIFY,
         stream_id=5,
         frame_id=10,
@@ -222,7 +222,7 @@ async def test_roundtrip_notify_with_complex_types():
 
 @pytest.mark.asyncio
 async def test_roundtrip_ack_mixed_actions():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.ACK,
         stream_id=3,
         frame_id=7,
@@ -257,7 +257,7 @@ async def test_roundtrip_ack_mixed_actions():
 
 @pytest.mark.asyncio
 async def test_roundtrip_notify_empty_messages():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.NOTIFY,
         stream_id=0,
         frame_id=0,
@@ -274,7 +274,7 @@ async def test_roundtrip_notify_empty_messages():
 
 @pytest.mark.asyncio
 async def test_roundtrip_ack_empty_actions():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.ACK,
         stream_id=0,
         frame_id=0,
@@ -291,7 +291,7 @@ async def test_roundtrip_ack_empty_actions():
 
 @pytest.mark.asyncio
 async def test_roundtrip_notify_message_with_no_args():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
@@ -309,7 +309,7 @@ async def test_roundtrip_notify_message_with_no_args():
 
 @pytest.mark.asyncio
 async def test_roundtrip_haproxy_hello_no_capabilities():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,
@@ -328,7 +328,7 @@ async def test_roundtrip_haproxy_hello_no_capabilities():
 
 @pytest.mark.asyncio
 async def test_roundtrip_agent_hello_no_capabilities():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.AGENT_HELLO,
         stream_id=1,
         frame_id=1,
@@ -347,7 +347,7 @@ async def test_roundtrip_agent_hello_no_capabilities():
 
 @pytest.mark.asyncio
 async def test_roundtrip_disconnect_empty_message():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.HAPROXY_DISCONNECT,
         stream_id=0,
         frame_id=0,
@@ -365,7 +365,7 @@ async def test_roundtrip_disconnect_empty_message():
 
 @pytest.mark.asyncio
 async def test_roundtrip_metadata_flags():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.ACK,
         stream_id=1,
         frame_id=1,
@@ -382,7 +382,7 @@ async def test_roundtrip_metadata_flags():
 
 @pytest.mark.asyncio
 async def test_roundtrip_large_stream_and_frame_ids():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.ACK,
         stream_id=999999,
         frame_id=888888,

@@ -36,7 +36,7 @@ class ServerConfiguration:
         )
         self._server_compatible = True
 
-    async def _check_version_compatibility(self, ha_versions: list[str]):
+    def _check_version_compatibility(self, ha_versions: list[str]):
         """
         Check if server version is compatible with HAProxy versions.
 
@@ -59,7 +59,7 @@ class ServerConfiguration:
             f"HAProxy supports {', '.join(ha_versions)}."
         )
 
-    async def _find_max_frame_size(self, ha_max_frame_size: int):
+    def _find_max_frame_size(self, ha_max_frame_size: int):
         """
         Negotiate maximum frame size with HAProxy.
 
@@ -76,7 +76,7 @@ class ServerConfiguration:
             self._server_compatible = False
             return
 
-    async def _find_common_capabilities(self, ha_capabilities: list[str]):
+    def _find_common_capabilities(self, ha_capabilities: list[str]):
         """
         Find common capabilities between server and HAProxy.
 
@@ -94,7 +94,7 @@ class ServerConfiguration:
         # changes to the system - instead just log a warning that HAProxy won't take advantage of it and
         # move on
 
-    async def negotiate_server_compatibility(
+    def negotiate_server_compatibility(
         self,
         supported_versions: list[str],
         ha_max_frame_size: int,
@@ -110,9 +110,9 @@ class ServerConfiguration:
         :param int ha_max_frame_size: Maximum frame size supported by HAProxy
         :param list[str] ha_capabilities: Capabilities supported by HAProxy
         """
-        await self._check_version_compatibility(supported_versions)
-        await self._find_max_frame_size(ha_max_frame_size)
-        await self._find_common_capabilities(ha_capabilities)
+        self._check_version_compatibility(supported_versions)
+        self._find_max_frame_size(ha_max_frame_size)
+        self._find_common_capabilities(ha_capabilities)
 
     @property
     def is_compatible(self) -> bool:

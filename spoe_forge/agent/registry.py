@@ -21,7 +21,6 @@ class AgentRegistry:
     def __init__(self):
         """Initialize a new agent registry."""
         self._handlers: dict[str, MessageHandlerFunc] = {}
-        self._validation_cache: dict[str, bool] = {}
 
     def register(self, message_name: str, handler: MessageHandlerFunc) -> None:
         """
