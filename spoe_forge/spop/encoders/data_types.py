@@ -11,7 +11,7 @@ from spoe_forge.spop.spop_types import SpoaDataType
 logger = logging.getLogger(__name__)
 
 
-async def _compose_varint(val: int) -> bytes:
+def _compose_varint(val: int) -> bytes:
     """
     Compose Varint for SPOA protocol.
 
@@ -47,18 +47,18 @@ async def _compose_varint(val: int) -> bytes:
     return bytes(out)
 
 
-async def _compose_binary(val: bytes) -> bytes:
+def _compose_binary(val: bytes) -> bytes:
     """
     Encode binary data with varint length prefix.
 
     :param bytes val: Binary data to encode
     :return: Encoded bytes with length prefix
     """
-    length_var = await _compose_varint(len(val))
+    length_var = _compose_varint(len(val))
     return length_var + val
 
 
-async def _type_data(data_type: DataType, flags: int = 0x00) -> bytes:
+def _type_data(data_type: DataType, flags: int = 0x00) -> bytes:
     """
     Create TYPE + FLAGS byte for SPOA protocol.
 
@@ -71,7 +71,7 @@ async def _type_data(data_type: DataType, flags: int = 0x00) -> bytes:
     return (flags | data_type).to_bytes(1, byteorder="big")
 
 
-async def encode_tiny_int(val: int) -> bytes:
+def encode_tiny_int(val: int) -> bytes:
     """
     Encode 1-byte integer for SPOA protocol.
 
@@ -84,7 +84,7 @@ async def encode_tiny_int(val: int) -> bytes:
     return val.to_bytes(length=1, byteorder="big")
 
 
-async def encode_frame_len(frame_len: int) -> bytes:
+def encode_frame_len(frame_len: int) -> bytes:
     """
     Encode frame length as 4-byte big-endian integer.
 
@@ -99,17 +99,17 @@ async def encode_frame_len(frame_len: int) -> bytes:
         )
 
 
-async def encode_int(val: int) -> bytes:
+def encode_int(val: int) -> bytes:
     """
     Encode integer as varint for SPOA protocol.
 
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    return await _compose_varint(val)
+    return _compose_varint(val)
 
 
-async def encode_string(val: str) -> bytes:
+def encode_string(val: str) -> bytes:
     """
     Encode string as ASCII with varint length prefix.
 
@@ -117,14 +117,14 @@ async def encode_string(val: str) -> bytes:
     :return: Encoded bytes
     """
     try:
-        return await _compose_binary(val.encode("ascii"))
+        return _compose_binary(val.encode("ascii"))
     except UnicodeEncodeError:
         raise SpopEncodeError(
             f"cannot encode non-ASCII string to SPOP: {val!r}",
         )
 
 
-async def encode_dt_null() -> bytes:
+def encode_dt_null() -> bytes:
     """
     Encode NULL data type for SPOA protocol.
 
@@ -132,10 +132,10 @@ async def encode_dt_null() -> bytes:
 
     :return: Encoded bytes
     """
-    return await _type_data(DataType.NULL)
+    return _type_data(DataType.NULL)
 
 
-async def encode_dt_int32(val: int) -> bytes:
+def encode_dt_int32(val: int) -> bytes:
     """
     Encode INT32 with type prefix for SPOA protocol.
 
@@ -149,10 +149,10 @@ async def encode_dt_int32(val: int) -> bytes:
         raise SpopEncodeError(
             f"cannot encode INT32 value to SPOP: {val!r}",
         )
-    return await _type_data(DataType.INT32) + await _compose_varint(unsigned_val)
+    return _type_data(DataType.INT32) + _compose_varint(unsigned_val)
 
 
-async def encode_dt_int64(val: int) -> bytes:
+def encode_dt_int64(val: int) -> bytes:
     """
     Encode INT64 with type prefix for SPOA protocol.
 
@@ -166,10 +166,10 @@ async def encode_dt_int64(val: int) -> bytes:
         raise SpopEncodeError(
             f"cannot encode INT64 value to SPOP: {val!r}",
         )
-    return await _type_data(DataType.INT64) + await _compose_varint(unsigned_val)
+    return _type_data(DataType.INT64) + _compose_varint(unsigned_val)
 
 
-async def encode_dt_uint32(val: int) -> bytes:
+def encode_dt_uint32(val: int) -> bytes:
     """
     Encode UINT32 with type prefix for SPOA protocol.
 
@@ -183,10 +183,10 @@ async def encode_dt_uint32(val: int) -> bytes:
         raise SpopEncodeError(
             f"cannot encode UINT32 value to SPOP: {val!r}",
         )
-    return await _type_data(DataType.UINT32) + await _compose_varint(unsigned_val)
+    return _type_data(DataType.UINT32) + _compose_varint(unsigned_val)
 
 
-async def encode_dt_uint64(val: int) -> bytes:
+def encode_dt_uint64(val: int) -> bytes:
     """
     Encode UINT64 with type prefix for SPOA protocol.
 
@@ -200,10 +200,10 @@ async def encode_dt_uint64(val: int) -> bytes:
         raise SpopEncodeError(
             f"cannot encode UINT64 value to SPOP: {val!r}",
         )
-    return await _type_data(DataType.UINT64) + await _compose_varint(unsigned_val)
+    return _type_data(DataType.UINT64) + _compose_varint(unsigned_val)
 
 
-async def encode_dt_bool(val: bool) -> bytes:
+def encode_dt_bool(val: bool) -> bytes:
     """
     Encode boolean with type prefix for SPOA protocol.
 
@@ -213,40 +213,40 @@ async def encode_dt_bool(val: bool) -> bytes:
     :return: Encoded bytes
     """
     flag = DataFlag.BOOL_TRUE if val else DataFlag.BOOL_FALSE
-    return await _type_data(DataType.BOOL, flag)
+    return _type_data(DataType.BOOL, flag)
 
 
-async def encode_dt_ipv4(val: ipaddress.IPv4Address) -> bytes:
+def encode_dt_ipv4(val: ipaddress.IPv4Address) -> bytes:
     """
     Encode IPv4 address with type prefix for SPOA protocol.
 
     :param ipaddress.IPv4Address val: IPv4 address to encode
     :return: Encoded bytes
     """
-    return await _type_data(DataType.IPV4) + val.packed
+    return _type_data(DataType.IPV4) + val.packed
 
 
-async def encode_dt_ipv6(val: ipaddress.IPv6Address) -> bytes:
+def encode_dt_ipv6(val: ipaddress.IPv6Address) -> bytes:
     """
     Encode IPv6 address with type prefix for SPOA protocol.
 
     :param ipaddress.IPv6Address val: IPv6 address to encode
     :return: Encoded bytes
     """
-    return await _type_data(DataType.IPV6) + val.packed
+    return _type_data(DataType.IPV6) + val.packed
 
 
-async def encode_dt_binary(val: bytes) -> bytes:
+def encode_dt_binary(val: bytes) -> bytes:
     """
     Encode binary data with type prefix for SPOA protocol.
 
     :param bytes val: Binary data to encode
     :return: Encoded bytes
     """
-    return await _type_data(DataType.BINARY) + await _compose_binary(val)
+    return _type_data(DataType.BINARY) + _compose_binary(val)
 
 
-async def encode_dt_string(val: str) -> bytes:
+def encode_dt_string(val: str) -> bytes:
     """
     Encode string with type prefix for SPOA protocol.
 
@@ -256,16 +256,14 @@ async def encode_dt_string(val: str) -> bytes:
     :return: Encoded bytes
     """
     try:
-        return await _type_data(DataType.STRING) + await _compose_binary(
-            val.encode("ascii")
-        )
+        return _type_data(DataType.STRING) + _compose_binary(val.encode("ascii"))
     except UnicodeEncodeError:
         raise SpopEncodeError(
             f"cannot encode non-ASCII string to SPOP: {val!r}",
         )
 
 
-async def auto_encode_dt_var(val: SpoaDataType) -> bytes:
+def auto_encode_dt_var(val: SpoaDataType) -> bytes:
     """
     Automatically detect type and encode with appropriate type prefix.
 
@@ -277,26 +275,26 @@ async def auto_encode_dt_var(val: SpoaDataType) -> bytes:
     logger.debug(f"Auto-encoding value: {type(val).__name__} = {val!r}")
 
     if val is None:
-        result = await encode_dt_null()
+        result = encode_dt_null()
 
     elif isinstance(val, bool):
         # Check bool before int since bool is a subclass of int in Python
-        result = await encode_dt_bool(val)
+        result = encode_dt_bool(val)
 
     elif isinstance(val, int):
-        result = await encode_dt_int64(val)
+        result = encode_dt_int64(val)
 
     elif isinstance(val, ipaddress.IPv4Address):
-        result = await encode_dt_ipv4(val)
+        result = encode_dt_ipv4(val)
 
     elif isinstance(val, ipaddress.IPv6Address):
-        result = await encode_dt_ipv6(val)
+        result = encode_dt_ipv6(val)
 
     elif isinstance(val, bytes):
-        result = await encode_dt_binary(val)
+        result = encode_dt_binary(val)
 
     elif isinstance(val, str):
-        result = await encode_dt_string(val)
+        result = encode_dt_string(val)
 
     else:
         raise SpopEncodeError(

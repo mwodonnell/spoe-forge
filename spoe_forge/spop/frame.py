@@ -91,7 +91,7 @@ class Frame(ABC):
 
         return frame_class
 
-    async def encode(self, max_frame_size: int) -> bytes:
+    def encode(self, max_frame_size: int) -> bytes:
         """
         Encode frame type, metadata, and payload to SPOP bytes.
 
@@ -102,13 +102,13 @@ class Frame(ABC):
         logger.debug(f"Encoding {self.frame_type.name} frame")
 
         out = bytearray()
-        out.extend(await encode_tiny_int(self.frame_type))
-        out.extend(await encode_metadata(self.metadata))
+        out.extend(encode_tiny_int(self.frame_type))
+        out.extend(encode_metadata(self.metadata))
 
-        out.extend(await self.encode_payload())
+        out.extend(self.encode_payload())
 
         frame_len = len(out)
-        encoded = bytearray(await encode_frame_len(frame_len)) + out
+        encoded = bytearray(encode_frame_len(frame_len)) + out
 
         if len(encoded) > max_frame_size:
             raise SpopEncodeError(
@@ -244,7 +244,7 @@ class Frame(ABC):
         return frame
 
     @abstractmethod
-    async def encode_payload(self) -> bytes:
+    def encode_payload(self) -> bytes:
         """
         Encode frame-specific payload to bytes.
 
@@ -323,7 +323,7 @@ class HaproxyHello(Frame):
     engine_id: str = None
     healthcheck: bool = False
 
-    async def encode_payload(self) -> bytes:
+    def encode_payload(self) -> bytes:
         payload = {
             "supported-versions": self.to_spop_list(self.supported_versions),
             "max-frame-size": self.max_frame_size,
@@ -334,7 +334,7 @@ class HaproxyHello(Frame):
         if self.engine_id is not None:
             payload["engine-id"] = self.engine_id
 
-        return await encode_kv_list(payload)
+        return encode_kv_list(payload)
 
     def decode_payload(
         self, buf: bytes, offset: int, end: int
@@ -376,14 +376,14 @@ class AgentHello(Frame):
     max_frame_size: int
     capabilities: list[str]
 
-    async def encode_payload(self) -> bytes:
+    def encode_payload(self) -> bytes:
         payload = {
             "version": self.version,
             "max-frame-size": self.max_frame_size,
             "capabilities": self.to_spop_list(self.capabilities),
         }
 
-        return await encode_kv_list(payload)
+        return encode_kv_list(payload)
 
     def decode_payload(
         self, buf: bytes, offset: int, end: int
@@ -420,13 +420,13 @@ class Disconnect(Frame):
     status_code: int
     message: str
 
-    async def encode_payload(self) -> bytes:
+    def encode_payload(self) -> bytes:
         payload = {
             "status-code": self.status_code,
             "message": self.message,
         }
 
-        return await encode_kv_list(payload)
+        return encode_kv_list(payload)
 
     def decode_payload(
         self, buf: bytes, offset: int, end: int
@@ -459,8 +459,8 @@ class Notify(Frame):
 
     messages: Messages
 
-    async def encode_payload(self) -> bytes:
-        return await encode_message_list(self.messages)
+    def encode_payload(self) -> bytes:
+        return encode_message_list(self.messages)
 
     def decode_payload(self, buf: bytes, offset: int, end: int) -> SpoaDec["Notify"]:
         self.messages, offset = decode_list_of_messages(buf, offset=offset, end=end)
@@ -486,11 +486,11 @@ class Ack(Frame):
 
     actions: list[Action]
 
-    async def encode_payload(self) -> bytes:
+    def encode_payload(self) -> bytes:
         if self.actions is None:
             return bytes()
 
-        return await encode_action_list(self.actions)
+        return encode_action_list(self.actions)
 
     def decode_payload(self, buf: bytes, offset: int, end: int) -> SpoaDec["Ack"]:
         self.actions, offset = decode_list_of_actions(buf, offset=offset, end=end)

@@ -15,7 +15,7 @@ from spoe_forge.spop.spop_types import UnsetVarAction
 async def test_roundtrip_kv_pair(kv_pair_data):
     key, value, desc = kv_pair_data
 
-    encoded = await encoder._compose_kv_pair(key, value)
+    encoded = encoder._compose_kv_pair(key, value)
     result_key, result_val, offset = decoder._parse_kv_pair(encoded, 0)
 
     assert result_key == key
@@ -37,7 +37,7 @@ async def test_roundtrip_kv_pair_complex_types():
     ]
 
     for key, value in test_cases:
-        encoded = await encoder._compose_kv_pair(key, value)
+        encoded = encoder._compose_kv_pair(key, value)
         result_key, result_val, offset = decoder._parse_kv_pair(encoded, 0)
 
         assert result_key == key
@@ -49,7 +49,7 @@ async def test_roundtrip_kv_pair_complex_types():
 async def test_roundtrip_metadata(metadata_data):
     metadata_obj, desc = metadata_data
 
-    encoded = await encoder.encode_metadata(metadata_obj)
+    encoded = encoder.encode_metadata(metadata_obj)
     result, offset = decoder.decode_metadata(encoded, 0)
 
     assert result.flags.FIN == metadata_obj.flags.FIN
@@ -71,7 +71,7 @@ async def test_roundtrip_metadata_edge_cases():
     ]
 
     for metadata in test_cases:
-        encoded = await encoder.encode_metadata(metadata)
+        encoded = encoder.encode_metadata(metadata)
         result, offset = decoder.decode_metadata(encoded, 0)
 
         assert result.flags.FIN == metadata.flags.FIN
@@ -84,7 +84,7 @@ async def test_roundtrip_metadata_edge_cases():
 async def test_roundtrip_kv_list(kv_list_data):
     kv_dict, desc = kv_list_data
 
-    encoded = await encoder.encode_kv_list(kv_dict)
+    encoded = encoder.encode_kv_list(kv_dict)
     result, offset = decoder.decode_kv_list(encoded, 0, len(encoded))
 
     assert result == kv_dict
@@ -95,7 +95,7 @@ async def test_roundtrip_kv_list(kv_list_data):
 async def test_roundtrip_kv_list_empty():
     kv_dict = {}
 
-    encoded = await encoder.encode_kv_list(kv_dict)
+    encoded = encoder.encode_kv_list(kv_dict)
     result, offset = decoder.decode_kv_list(encoded, 0, len(encoded))
 
     assert result == {}
@@ -112,7 +112,7 @@ async def test_roundtrip_kv_list_mixed_types():
         "data": b"\x00\x01\x02",
     }
 
-    encoded = await encoder.encode_kv_list(kv_dict)
+    encoded = encoder.encode_kv_list(kv_dict)
     result, offset = decoder.decode_kv_list(encoded, 0, len(encoded))
 
     assert result == kv_dict
@@ -124,7 +124,7 @@ async def test_roundtrip_kv_list_with_offset():
     kv_dict = {"a": 1, "b": 2}
     prefix = b"\xff\xff\xff\xff"
 
-    encoded_kv = await encoder.encode_kv_list(kv_dict)
+    encoded_kv = encoder.encode_kv_list(kv_dict)
     full_buffer = prefix + encoded_kv
 
     result, offset = decoder.decode_kv_list(full_buffer, len(prefix), len(full_buffer))
@@ -137,7 +137,7 @@ async def test_roundtrip_kv_list_with_offset():
 async def test_roundtrip_message_list(message_list_data):
     messages_dict, desc = message_list_data
 
-    encoded = await encoder.encode_message_list(messages_dict)
+    encoded = encoder.encode_message_list(messages_dict)
     result, offset = decoder.decode_list_of_messages(encoded, 0, len(encoded))
 
     assert result == messages_dict
@@ -148,7 +148,7 @@ async def test_roundtrip_message_list(message_list_data):
 async def test_roundtrip_message_list_empty():
     messages = {}
 
-    encoded = await encoder.encode_message_list(messages)
+    encoded = encoder.encode_message_list(messages)
     result, offset = decoder.decode_list_of_messages(encoded, 0, len(encoded))
 
     assert result == messages
@@ -173,7 +173,7 @@ async def test_roundtrip_message_list_complex():
         },
     }
 
-    encoded = await encoder.encode_message_list(messages)
+    encoded = encoder.encode_message_list(messages)
     result, offset = decoder.decode_list_of_messages(encoded, 0, len(encoded))
 
     assert result == messages
@@ -185,7 +185,7 @@ async def test_roundtrip_message_list_with_offset():
     messages = {"test": {"arg": 1}}
     prefix = b"\xaa\xbb\xcc"
 
-    encoded_messages = await encoder.encode_message_list(messages)
+    encoded_messages = encoder.encode_message_list(messages)
     full_buffer = prefix + encoded_messages
 
     result, offset = decoder.decode_list_of_messages(
@@ -200,7 +200,7 @@ async def test_roundtrip_message_list_with_offset():
 async def test_roundtrip_action(action_data):
     action_obj, desc = action_data
 
-    encoded = await encoder._compose_action(action_obj)
+    encoded = encoder._compose_action(action_obj)
     result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
     assert len(result) == 1
@@ -225,7 +225,7 @@ async def test_roundtrip_action_set_var_all_scopes():
     for scope in scopes:
         action = SetVarAction(scope=scope, name="test", value=42)
 
-        encoded = await encoder._compose_action(action)
+        encoded = encoder._compose_action(action)
         result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
         assert len(result) == 1
@@ -251,7 +251,7 @@ async def test_roundtrip_action_set_var_all_types():
     for name, value in test_values:
         action = SetVarAction(scope=ActionScope.SESSION, name=name, value=value)
 
-        encoded = await encoder._compose_action(action)
+        encoded = encoder._compose_action(action)
         result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
         assert len(result) == 1
@@ -272,7 +272,7 @@ async def test_roundtrip_action_unset_var_all_scopes():
     for scope in scopes:
         action = UnsetVarAction(scope=scope, name="test")
 
-        encoded = await encoder._compose_action(action)
+        encoded = encoder._compose_action(action)
         result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
         assert len(result) == 1
@@ -286,7 +286,7 @@ async def test_roundtrip_action_list(action_list_data):
     """Test action list encoding/decoding round-trip."""
     actions, desc = action_list_data
 
-    encoded = await encoder.encode_action_list(actions)
+    encoded = encoder.encode_action_list(actions)
     result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
     assert len(result) == len(actions)
@@ -303,7 +303,7 @@ async def test_roundtrip_action_list(action_list_data):
 async def test_roundtrip_action_list_empty():
     actions = []
 
-    encoded = await encoder.encode_action_list(actions)
+    encoded = encoder.encode_action_list(actions)
     result, offset = decoder.decode_list_of_actions(encoded, 0, 0)
 
     assert result == []
@@ -320,7 +320,7 @@ async def test_roundtrip_action_list_multiple():
         UnsetVarAction(scope=ActionScope.TRANSACTION, name="e"),
     ]
 
-    encoded = await encoder.encode_action_list(actions)
+    encoded = encoder.encode_action_list(actions)
     result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
     assert len(result) == len(actions)
@@ -348,8 +348,8 @@ async def test_roundtrip_full_notify_payload():
         }
     }
 
-    encoded_metadata = await encoder.encode_metadata(metadata)
-    encoded_messages = await encoder.encode_message_list(messages)
+    encoded_metadata = encoder.encode_metadata(metadata)
+    encoded_messages = encoder.encode_message_list(messages)
     full_payload = encoded_metadata + encoded_messages
 
     decoded_metadata, offset = decoder.decode_metadata(full_payload, 0)
@@ -379,8 +379,8 @@ async def test_roundtrip_full_ack_payload():
         UnsetVarAction(scope=ActionScope.SESSION, name="temp"),
     ]
 
-    encoded_metadata = await encoder.encode_metadata(metadata)
-    encoded_actions = await encoder.encode_action_list(actions)
+    encoded_metadata = encoder.encode_metadata(metadata)
+    encoded_actions = encoder.encode_action_list(actions)
     full_payload = encoded_metadata + encoded_actions
 
     decoded_metadata, offset = decoder.decode_metadata(full_payload, 0)
