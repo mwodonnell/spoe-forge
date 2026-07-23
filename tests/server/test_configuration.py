@@ -64,6 +64,26 @@ async def test_check_version_compatibility_failure():
 
 
 @pytest.mark.asyncio
+async def test_check_version_compatibility_major_version_mismatch():
+    config = ServerConfiguration()
+
+    with patch("spoe_forge.server.configuration.logger") as mock_logger:
+        await config._check_version_compatibility(["3.0"])
+
+        assert config.is_compatible is False
+        mock_logger.error.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_check_version_compatibility_same_major_higher_minor():
+    config = ServerConfiguration()
+
+    await config._check_version_compatibility(["2.5"])
+
+    assert config.is_compatible is True
+
+
+@pytest.mark.asyncio
 async def test_check_version_compatibility_multiple_versions():
     config = ServerConfiguration()
 

@@ -45,7 +45,7 @@ class ServerConfiguration:
         float_ver = float(self._version)
         for version in ha_versions:
             float_ha_ver = float(version)
-            if floor(float_ha_ver) != floor(float_ha_ver):
+            if floor(float_ver) != floor(float_ha_ver):
                 continue
 
             if float_ver <= float_ha_ver:
