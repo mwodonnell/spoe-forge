@@ -125,14 +125,14 @@ def encode_message_list(messages: Messages) -> bytes:
             KV-NAME:  <STRING>
             KV-VALUE: <TYPED-DATA>
 
-    :param dict[str, dict[str, SpoaDataType]] messages: Messages with arguments
+    :param Messages messages: Ordered (name, args) message pairs
     :return: Encoded bytes
     :raises SpopEncodeError: If message has more than 255 arguments
     """
     logger.debug(f"Encoding {len(messages)} messages")
 
     out = bytearray()
-    for message, args in messages.items():
+    for message, args in messages:
         if len(args) > 255:
             raise SpopEncodeError(
                 f"message '{message}' has too many args: {len(args)} (max 255)"

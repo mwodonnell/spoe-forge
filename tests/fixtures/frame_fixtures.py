@@ -110,9 +110,9 @@ def disconnect_data(request):
             FrameType.NOTIFY,
             MetaData(flags=Flags(FIN=True, ABORT=False), stream_id=1, frame_id=1),
             {
-                "messages": {
-                    "check-ip": {"src": "192.168.1.1", "dst": "10.0.0.1"},
-                }
+                "messages": [
+                    ("check-ip", {"src": "192.168.1.1", "dst": "10.0.0.1"}),
+                ]
             },
             "Notify: single message",
         ),
@@ -120,17 +120,17 @@ def disconnect_data(request):
             FrameType.NOTIFY,
             MetaData(flags=Flags(FIN=True, ABORT=False), stream_id=2, frame_id=3),
             {
-                "messages": {
-                    "check-ip": {"src": "192.168.1.1"},
-                    "check-user": {"username": "admin", "active": True},
-                }
+                "messages": [
+                    ("check-ip", {"src": "192.168.1.1"}),
+                    ("check-user", {"username": "admin", "active": True}),
+                ]
             },
             "Notify: multiple messages",
         ),
         (
             FrameType.NOTIFY,
             MetaData(flags=Flags(FIN=True, ABORT=False), stream_id=0, frame_id=0),
-            {"messages": {}},
+            {"messages": []},
             "Notify: empty messages",
         ),
     ],
@@ -218,7 +218,7 @@ def ack_data(request):
         (
             FrameType.NOTIFY,
             MetaData(flags=Flags(FIN=True, ABORT=False), stream_id=1, frame_id=1),
-            {"messages": {"test": {"arg": 1}}},
+            {"messages": [("test", {"arg": 1})]},
             "Notify",
         ),
         (

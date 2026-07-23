@@ -13,6 +13,7 @@ from spoe_forge.spop.spop_types import Action
 from spoe_forge.spop.spop_types import SetVarAction
 from spoe_forge.spop.spop_types import UnsetVarAction
 from spoe_forge.spop.spop_types import Flags
+from spoe_forge.spop.spop_types import Messages
 from spoe_forge.spop.spop_types import MetaData
 from spoe_forge.spop.spop_types import SpoaDataType
 from spoe_forge.spop.spop_types import SpoaDec
@@ -104,12 +105,15 @@ def decode_kv_list(
 
 def decode_list_of_messages(
     buf: bytes, offset: int = 0, end: int = 0
-) -> SpoaDec[dict[str, dict[str, SpoaDataType]]]:
+) -> SpoaDec[Messages]:
     """
     Decode message list from SPOA protocol.
 
     LIST-OF-MESSAGES: [ <MESSAGE-NAME> <NB-ARGS:1 byte> <KV-LIST> ... ]
         MESSAGE-NAME: <STRING>
+
+    Messages are returned as ordered (name, args) pairs - the same message name
+    may legitimately appear more than once in a single NOTIFY frame.
 
     :param bytes buf: SPOP byte stream to consume from
     :param int offset: Offset to start reading from
@@ -119,7 +123,7 @@ def decode_list_of_messages(
     """
     logger.debug(f"Decoding message list: {end - offset} bytes to process")
 
-    payload = {}
+    payload = []
     while offset < end:
         message, offset = decode_string(buf, offset)
         num_args, offset = decode_tiny_int(buf, offset)
@@ -135,7 +139,7 @@ def decode_list_of_messages(
 
             args[k] = v
 
-        payload[message] = args
+        payload.append((message, args))
 
     logger.debug(f"Decoded {len(payload)} messages")
     return payload, offset

@@ -95,7 +95,7 @@ async def test_send_frame_fails_when_stream_closed():
 async def test_send_frame_raises_when_frame_too_big():
     handler, reader, writer = create_handler()
 
-    large_messages = {f"msg{i}": {"arg": i} for i in range(1000)}
+    large_messages = [(f"msg{i}", {"arg": i}) for i in range(1000)]
     test_frame = Frame.construct(
         FrameType.NOTIFY,
         stream_id=1,
@@ -225,7 +225,7 @@ async def test_handle_handshake_rejects_wrong_frame_type():
         FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
-        messages={},
+        messages=[],
     )
 
     with (
@@ -314,14 +314,14 @@ async def test_handle_notify_cycle_success():
         FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
-        messages={"test": {"arg": "value"}},
+        messages=[("test", {"arg": "value"})],
     )
 
     with patch.object(Frame, "decode", return_value=notify):
         result = await handler.handle_notify_cycle()
 
         assert result is True
-        notify_handler.assert_called_once_with({"test": {"arg": "value"}})
+        notify_handler.assert_called_once_with([("test", {"arg": "value"})])
         writer.write.assert_called_once()  # ACK sent
 
 
@@ -393,7 +393,7 @@ async def test_handle_notify_cycle_passes_messages_to_handler():
 
     handler, reader, writer = create_handler(capture_handler)
 
-    test_messages = {"check-ip": {"src": "192.168.1.1", "dst": "10.0.0.1"}}
+    test_messages = [("check-ip", {"src": "192.168.1.1", "dst": "10.0.0.1"})]
     notify = Frame.construct(
         FrameType.NOTIFY,
         stream_id=1,
@@ -423,10 +423,10 @@ async def test_core_handler_full_flow():
     )
 
     notify1 = Frame.construct(
-        FrameType.NOTIFY, stream_id=1, frame_id=1, messages={"msg1": {}}
+        FrameType.NOTIFY, stream_id=1, frame_id=1, messages=[("msg1", {})]
     )
     notify2 = Frame.construct(
-        FrameType.NOTIFY, stream_id=1, frame_id=2, messages={"msg2": {}}
+        FrameType.NOTIFY, stream_id=1, frame_id=2, messages=[("msg2", {})]
     )
     disconnect = Frame.construct(
         FrameType.HAPROXY_DISCONNECT,
@@ -463,7 +463,7 @@ async def test_core_handler_handles_spoeforge_error():
         healthcheck=False,
     )
 
-    notify = Frame.construct(FrameType.NOTIFY, stream_id=1, frame_id=1, messages={})
+    notify = Frame.construct(FrameType.NOTIFY, stream_id=1, frame_id=1, messages=[])
 
     with (
         patch.object(Frame, "decode", side_effect=[haproxy_hello, notify]),

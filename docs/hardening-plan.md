@@ -17,8 +17,8 @@ robustness boundary (unbounded input, charset assumptions, silent truncation, ha
 | 2 | fix: validate non-ASCII vs HAProxy, then latin-1 if confirmed | merged (PR #21) — validated: HAProxy ships raw bytes |
 | 3 | fix: range-check integer encoders | merged (PR #22) |
 | 4 | feat: support async message handlers | merged (PR #23) |
-| 5 | fix: keep decode errors within SpopDecodeError contract | in review |
-| 6 | refactor: Messages as ordered sequence (match SPOA prior art) | todo |
+| 5 | fix: keep decode errors within SpopDecodeError contract | merged (PR #24) |
+| 6 | refactor: Messages as ordered sequence (match SPOA prior art) | in review |
 | 7 | fix: compare SPOP versions as (major, minor) tuples | todo |
 | 8 | fix: handler failures ACK empty instead of disconnecting | todo |
 | 9 | feat: public serve(), ssl passthrough, clean shutdown | todo |

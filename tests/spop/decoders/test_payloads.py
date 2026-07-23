@@ -140,7 +140,7 @@ def test_decode_list_of_messages(message_list_case):
 def test_decode_list_of_messages_empty():
     result, offset = payload.decode_list_of_messages(b"", 0, 0)
 
-    assert result == {}
+    assert result == []
     assert offset == 0
 
 
@@ -148,7 +148,7 @@ def test_decode_list_of_messages_with_offset():
     buf = b"\xff\xff\x04test\x00"  # Prefix + "test" with no args
     result, offset = payload.decode_list_of_messages(buf, 2, 8)
 
-    assert result == {"test": {}}
+    assert result == [("test", {})]
     assert offset == 8
 
 
@@ -169,7 +169,7 @@ def test_decode_list_of_messages_calls_lower_level_functions():
         mock_decode_string.assert_called_once_with(test_buf, 0)
         mock_decode_tiny.assert_called_once_with(test_buf, 5)
         mock_parse_kv.assert_called_once_with(test_buf, 6)
-        assert result == {"test": {"a": 1}}
+        assert result == [("test", {"a": 1})]
 
 
 def test_decode_list_of_messages_raises_on_duplicate_arg():

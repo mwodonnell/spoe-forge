@@ -89,7 +89,7 @@ class SpoeForge:
         """
         actions = []
 
-        for message, args in messages.items():
+        for message, args in messages:
             handler_actions = await self._registry.handle_message(message, args)
 
             if handler_actions is None:
