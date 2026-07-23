@@ -25,7 +25,7 @@ async def test_roundtrip_haproxy_hello(haproxy_hello_data):
         **payload_kwargs,
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -54,7 +54,7 @@ async def test_roundtrip_agent_hello(agent_hello_data):
         **payload_kwargs,
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -80,7 +80,7 @@ async def test_roundtrip_disconnect(disconnect_data):
         **payload_kwargs,
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -105,7 +105,7 @@ async def test_roundtrip_notify(notify_data):
         **payload_kwargs,
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -129,7 +129,7 @@ async def test_roundtrip_ack(ack_data):
         **payload_kwargs,
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
 
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
@@ -162,7 +162,7 @@ async def test_roundtrip_any_frame(any_frame_data):
         **payload_kwargs,
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -184,7 +184,7 @@ async def test_roundtrip_haproxy_hello_multiple_versions():
         capabilities=["pipelining", "async", "fragmentation"],
     )
 
-    encoded = await frame.encode(max_frame_size=32768)
+    encoded = frame.encode(max_frame_size=32768)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -209,7 +209,7 @@ async def test_roundtrip_notify_with_complex_types():
         },
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -235,7 +235,7 @@ async def test_roundtrip_ack_mixed_actions():
         ],
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -264,7 +264,7 @@ async def test_roundtrip_notify_empty_messages():
         messages={},
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -281,7 +281,7 @@ async def test_roundtrip_ack_empty_actions():
         actions=[],
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -298,7 +298,7 @@ async def test_roundtrip_notify_message_with_no_args():
         messages={"ping": {}},
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -318,7 +318,7 @@ async def test_roundtrip_haproxy_hello_no_capabilities():
         capabilities=[],
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -337,7 +337,7 @@ async def test_roundtrip_agent_hello_no_capabilities():
         capabilities=[],
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -355,7 +355,7 @@ async def test_roundtrip_disconnect_empty_message():
         message="",
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -371,7 +371,7 @@ async def test_roundtrip_metadata_flags():
         frame_id=1,
         actions=[],
     )
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 
@@ -389,7 +389,7 @@ async def test_roundtrip_large_stream_and_frame_ids():
         actions=[],
     )
 
-    encoded = await frame.encode(max_frame_size=16384)
+    encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
     decoded = await Frame.decode(reader)
 

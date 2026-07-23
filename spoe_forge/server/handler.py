@@ -67,7 +67,7 @@ class ForgeHandler:
             return False
 
         try:
-            self.writer.write(await frame.encode(self.config.max_frame_size))
+            self.writer.write(frame.encode(self.config.max_frame_size))
         except SpoeForgeError as e:
             logger.warning(
                 f"Failed to write frame to stream - {frame.frame_type.name} - {e}"

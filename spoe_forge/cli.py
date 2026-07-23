@@ -43,7 +43,7 @@ async def healthcheck(host: str, port: int, quiet: bool) -> bool:
             healthcheck=True,
         )
 
-        writer.write(await haproxy_hello.encode(DEFAULT_FRAME_SIZE))
+        writer.write(haproxy_hello.encode(DEFAULT_FRAME_SIZE))
         await writer.drain()
 
         agent_hello = await asyncio.wait_for(Frame.decode(reader), timeout=5.0)

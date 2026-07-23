@@ -189,7 +189,7 @@ async def test_encode_raises_on_size_limit():
     )
 
     with pytest.raises(SpopEncodeError, match="frame size .* exceeds max"):
-        await frame.encode(max_frame_size=100)  # Very small max size
+        frame.encode(max_frame_size=100)  # Very small max size
 
 
 @pytest.mark.asyncio
@@ -201,7 +201,7 @@ async def test_encode_includes_correct_frame_length():
         actions=[],
     )
 
-    result = await frame.encode(max_frame_size=16384)
+    result = frame.encode(max_frame_size=16384)
     frame_len = int.from_bytes(result[0:4], "big")
     assert frame_len == len(result) - 4
 
@@ -215,7 +215,7 @@ async def test_encode_includes_frame_type():
         actions=[],
     )
 
-    result = await frame.encode(max_frame_size=16384)
+    result = frame.encode(max_frame_size=16384)
     assert result[4] == FrameType.ACK
 
 

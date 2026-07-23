@@ -21,7 +21,7 @@ from spoe_forge.spop.spop_types import SpoaDataType
 logger = logging.getLogger(__name__)
 
 
-async def _compose_kv_pair(k: str, v: SpoaDataType) -> bytes:
+def _compose_kv_pair(k: str, v: SpoaDataType) -> bytes:
     """
     Encode key-value pair for SPOA protocol.
 
@@ -31,17 +31,17 @@ async def _compose_kv_pair(k: str, v: SpoaDataType) -> bytes:
     """
     out = bytearray()
 
-    k_encoded = await encode_string(k)
+    k_encoded = encode_string(k)
     out.extend(k_encoded)
 
-    v_encoded = await auto_encode_dt_var(v)
+    v_encoded = auto_encode_dt_var(v)
     out.extend(v_encoded)
 
     return bytes(out)
 
 
 @singledispatch
-async def _compose_action(action) -> bytes:
+def _compose_action(action) -> bytes:
     """
     Encode SPOP action using singledispatch pattern.
 
@@ -60,7 +60,7 @@ async def _compose_action(action) -> bytes:
 
 
 @_compose_action.register
-async def _compose_set_action(action: SetVarAction) -> bytes:
+def _compose_set_action(action: SetVarAction) -> bytes:
     """
     Encode SET_VAR action for SPOA protocol.
 
@@ -71,14 +71,14 @@ async def _compose_set_action(action: SetVarAction) -> bytes:
     out.append(ActionType.SET_VAR)
     out.append(ActionNBArgs.SET_VAR)
     out.append(action.scope)
-    out.extend(await encode_string(action.name))
-    out.extend(await auto_encode_dt_var(action.value))
+    out.extend(encode_string(action.name))
+    out.extend(auto_encode_dt_var(action.value))
 
     return bytes(out)
 
 
 @_compose_action.register
-async def _compose_unset_action(action: UnsetVarAction) -> bytes:
+def _compose_unset_action(action: UnsetVarAction) -> bytes:
     """
     Encode UNSET_VAR action for SPOA protocol.
 
@@ -89,12 +89,12 @@ async def _compose_unset_action(action: UnsetVarAction) -> bytes:
     out.append(ActionType.UNSET_VAR)
     out.append(ActionNBArgs.UNSET_VAR)
     out.append(action.scope)
-    out.extend(await encode_string(action.name))
+    out.extend(encode_string(action.name))
 
     return bytes(out)
 
 
-async def encode_kv_list(payload: dict[str, SpoaDataType]) -> bytes:
+def encode_kv_list(payload: dict[str, SpoaDataType]) -> bytes:
     """
     Encode key-value list for SPOA protocol.
 
@@ -109,13 +109,13 @@ async def encode_kv_list(payload: dict[str, SpoaDataType]) -> bytes:
 
     out = bytearray()
     for k, v in payload.items():
-        out.extend(await _compose_kv_pair(k, v))
+        out.extend(_compose_kv_pair(k, v))
 
     logger.debug(f"Encoded KV list: {len(out)} bytes")
     return bytes(out)
 
 
-async def encode_message_list(messages: Messages) -> bytes:
+def encode_message_list(messages: Messages) -> bytes:
     """
     Encode message list for SPOA protocol.
 
@@ -138,17 +138,17 @@ async def encode_message_list(messages: Messages) -> bytes:
                 f"message '{message}' has too many args: {len(args)} (max 255)"
             )
 
-        out.extend(await encode_string(message))
-        out.extend(await encode_tiny_int(len(args)))
+        out.extend(encode_string(message))
+        out.extend(encode_tiny_int(len(args)))
 
         for k, v in args.items():
-            out.extend(await _compose_kv_pair(k, v))
+            out.extend(_compose_kv_pair(k, v))
 
     logger.debug(f"Encoded message list: {len(out)} bytes")
     return bytes(out)
 
 
-async def encode_action_list(actions: list[Action]) -> bytes:
+def encode_action_list(actions: list[Action]) -> bytes:
     """
     Encode action list for SPOA protocol.
 
@@ -163,12 +163,12 @@ async def encode_action_list(actions: list[Action]) -> bytes:
     """
     out = bytearray()
     for action in actions:
-        out.extend(await _compose_action(action))
+        out.extend(_compose_action(action))
 
     return bytes(out)
 
 
-async def encode_metadata(metadata: MetaData) -> bytes:
+def encode_metadata(metadata: MetaData) -> bytes:
     """
     Encode frame metadata for SPOA protocol.
 
@@ -190,7 +190,7 @@ async def encode_metadata(metadata: MetaData) -> bytes:
 
     out.extend(flags)
 
-    out.extend(await encode_int(metadata.stream_id))
-    out.extend(await encode_int(metadata.frame_id))
+    out.extend(encode_int(metadata.stream_id))
+    out.extend(encode_int(metadata.frame_id))
 
     return bytes(out)
