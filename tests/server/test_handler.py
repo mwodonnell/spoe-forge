@@ -10,6 +10,7 @@ from spoe_forge.server.constants import DisconnectCode
 from spoe_forge.server.handler import ForgeHandler
 from spoe_forge.spop.constants import ActionScope
 from spoe_forge.spop.constants import FrameType
+from spoe_forge.spop.exception import SpopEncodeError
 from spoe_forge.spop.exception import SpopEOFError
 from spoe_forge.spop.exception import SpopFrameTooBigError
 from spoe_forge.spop.frame import Disconnect
@@ -108,6 +109,28 @@ async def test_send_frame_raises_when_frame_too_big():
         await handler.send_frame(test_frame)
 
     writer.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_send_frame_returns_false_on_encode_error():
+    handler, reader, writer = create_handler()
+
+    test_frame = Frame.construct(
+        FrameType.ACK,
+        stream_id=1,
+        frame_id=1,
+        actions=[],
+    )
+
+    with (
+        patch.object(test_frame, "encode", side_effect=SpopEncodeError("boom")),
+        patch("spoe_forge.server.handler.logger") as mock_logger,
+    ):
+        result = await handler.send_frame(test_frame)
+
+        assert result is False
+        writer.write.assert_not_called()
+        mock_logger.warning.assert_called_once()
 
 
 @pytest.mark.asyncio
