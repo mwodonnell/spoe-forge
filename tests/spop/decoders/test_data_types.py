@@ -251,7 +251,7 @@ def test_decode_string(string_case):
     decoded, encoded, desc = string_case
 
     with patch("spoe_forge.spop.decoders.data_types.decode_binary") as mock_binary:
-        mock_binary.return_value = (decoded.encode("ascii"), len(encoded))
+        mock_binary.return_value = (decoded.encode("latin-1"), len(encoded))
 
         result = data_type.decode_string(encoded, 0)
 
@@ -269,13 +269,13 @@ def test_decode_string_with_offset():
         assert result == ("hello", 7)
 
 
-def test_decode_string_raises_error_on_invalid_ascii():
+def test_decode_string_accepts_high_bytes():
     with patch("spoe_forge.spop.decoders.data_types.decode_binary") as mock_binary:
-        mock_binary.return_value = (b"\xff\xfe", 3)
-        with pytest.raises(
-            SpopDecodeError, match="invalid ASCII string in SPOP stream"
-        ):
-            data_type.decode_string(b"\x02\xff\xfe", 0)
+        mock_binary.return_value = (b"h\xc3\xa9llo-\xff", 9)
+
+        result = data_type.decode_string(b"\x08h\xc3\xa9llo-\xff", 0)
+
+        assert result == ("h\xc3\xa9llo-\xff", 9)
 
 
 def test_decode_bool(bool_case):

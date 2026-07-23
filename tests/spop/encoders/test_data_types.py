@@ -84,9 +84,15 @@ def test_encode_string_calls_compose_binary():
         assert result == b"\x05hello"
 
 
-def test_encode_string_raises_error_on_non_ascii():
-    with pytest.raises(SpopEncodeError, match="cannot encode non-ASCII string"):
-        data_type.encode_string("héllo")
+def test_encode_string_accepts_latin1():
+    result = data_type.encode_string("héllo")
+
+    assert result == b"\x05h\xe9llo"
+
+
+def test_encode_string_raises_error_above_latin1():
+    with pytest.raises(SpopEncodeError, match="codepoints above 255"):
+        data_type.encode_string("h€llo")
 
 
 def test_compose_binary(binary_case):
@@ -300,9 +306,15 @@ def test_encode_dt_string_calls_compose_binary():
         assert result == b"\x08\x05hello"
 
 
-def test_encode_dt_string_raises_error_on_non_ascii():
-    with pytest.raises(SpopEncodeError, match="cannot encode non-ASCII string"):
-        data_type.encode_dt_string("héllo")
+def test_encode_dt_string_accepts_latin1():
+    result = data_type.encode_dt_string("héllo")
+
+    assert result == b"\x08\x05h\xe9llo"
+
+
+def test_encode_dt_string_raises_error_above_latin1():
+    with pytest.raises(SpopEncodeError, match="codepoints above 255"):
+        data_type.encode_dt_string("h€llo")
 
 
 def test_auto_encode_dt_var_null():

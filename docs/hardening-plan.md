@@ -13,8 +13,8 @@ robustness boundary (unbounded input, charset assumptions, silent truncation, ha
 
 | # | Ticket | Status |
 |---|--------|--------|
-| 1 | fix: enforce max frame size on inbound frames | in review |
-| 2 | fix: validate non-ASCII vs HAProxy, then latin-1 if confirmed | todo |
+| 1 | fix: enforce max frame size on inbound frames | merged (PR #20) |
+| 2 | fix: validate non-ASCII vs HAProxy, then latin-1 if confirmed | in review — validated: HAProxy ships raw bytes |
 | 3 | fix: range-check integer encoders | todo |
 | 4 | feat: support async message handlers | todo |
 | 5 | fix: keep decode errors within SpopDecodeError contract | todo |

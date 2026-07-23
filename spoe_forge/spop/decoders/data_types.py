@@ -210,17 +210,16 @@ def decode_string(buf: bytes, offset=0) -> SpoaDec[str]:
     """
     Decode string from SPOA protocol
 
-    No indication of how strings are encoded - using ASCII until we see odd behavior
+    The spec doesn't define an encoding and HAProxy ships header bytes verbatim
+    (verified empirically), so we use latin-1: a lossless byte<->str mapping that
+    never fails, mirroring how h11 treats HTTP header bytes.
 
     :param buf: SPOP byte stream to consume from
     :param offset: offset to start reading from
     :return: Tuple of the parsed string, and the adjusted offset
     """
     _bytes, offset = decode_binary(buf, offset)
-    try:
-        return _bytes.decode("ascii"), offset
-    except UnicodeDecodeError as e:
-        raise SpopDecodeError(f"invalid ASCII string in SPOP stream: {e}")
+    return _bytes.decode("latin-1"), offset
 
 
 def auto_decode_var(buf: bytes, offset=0) -> SpoaDec[SpoaDataType]:
