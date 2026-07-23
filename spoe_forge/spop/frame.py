@@ -20,8 +20,8 @@ from spoe_forge.spop.encoders.payloads import encode_kv_list
 from spoe_forge.spop.encoders.payloads import encode_message_list
 from spoe_forge.spop.encoders.payloads import encode_metadata
 from spoe_forge.spop.exception import SpopDecodeError
-from spoe_forge.spop.exception import SpopEncodeError
 from spoe_forge.spop.exception import SpopEOFError
+from spoe_forge.spop.exception import SpopFrameTooBigError
 from spoe_forge.spop.spop_types import Action, Messages
 from spoe_forge.spop.spop_types import Flags
 from spoe_forge.spop.spop_types import MetaData
@@ -96,7 +96,7 @@ class Frame(ABC):
 
         :param int max_frame_size: Maximum frame size allowed by connection
         :return: Encoded frame bytes
-        :raises SpopEncodeError: If encoded frame exceeds max_frame_size
+        :raises SpopFrameTooBigError: If encoded frame exceeds max_frame_size
         """
         logger.debug(f"Encoding {self.frame_type.name} frame")
 
@@ -110,7 +110,7 @@ class Frame(ABC):
         encoded = bytearray(encode_frame_len(frame_len)) + out
 
         if len(encoded) > max_frame_size:
-            raise SpopEncodeError(
+            raise SpopFrameTooBigError(
                 f"Total frame size {len(encoded)} exceeds maximum size {max_frame_size}"
             )
 
@@ -119,16 +119,18 @@ class Frame(ABC):
         return bytes(encoded)
 
     @classmethod
-    async def decode(cls, reader: StreamReader) -> "Frame":
+    async def decode(cls, reader: StreamReader, max_frame_size: int) -> "Frame":
         """
         Decode frame from SPOP byte stream.
 
         Reads frame length, type, metadata, and payload from stream.
 
         :param StreamReader reader: AsyncIO stream reader for SPOP connection
+        :param int max_frame_size: Maximum total frame size to accept
         :return: Decoded Frame object
         :raises SpopEOFError: If connection closed at EOF
         :raises SpopDecodeError: If frame decoding fails
+        :raises SpopFrameTooBigError: If the claimed frame size exceeds max_frame_size
         """
         logger.debug("Starting decode frame from stream")
 
@@ -147,6 +149,13 @@ class Frame(ABC):
         # HAProxy sends Frame len as an unencoded UINT32 - can't use data_decoder
         frame_len = decode_frame_len(len_buf)
         logger.debug(f"Frame length: {frame_len} bytes")
+
+        # Reject before buffering - the length is peer-controlled and unvalidated.
+        # Mirrors the encode-side check: total size includes the 4-byte length prefix.
+        if frame_len + 4 > max_frame_size:
+            raise SpopFrameTooBigError(
+                f"Total frame size {frame_len + 4} exceeds maximum size {max_frame_size}"
+            )
 
         try:
             frame_buf = await reader.readexactly(frame_len)

@@ -17,3 +17,9 @@ class SpopEOFError(SpoeForgeError):
     """Exception raised when unexpected end of stream is encountered."""
 
     pass
+
+
+class SpopFrameTooBigError(SpoeForgeError):
+    """Exception raised when a frame exceeds the maximum allowed frame size."""
+
+    pass

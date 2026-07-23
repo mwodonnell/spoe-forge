@@ -1,9 +1,11 @@
+import struct
+
 import pytest
 
 from spoe_forge.spop.constants import ActionScope
 from spoe_forge.spop.constants import FrameType
 from spoe_forge.spop.exception import SpopDecodeError
-from spoe_forge.spop.exception import SpopEncodeError
+from spoe_forge.spop.exception import SpopFrameTooBigError
 from spoe_forge.spop.frame import Ack
 from spoe_forge.spop.frame import AgentHello
 from spoe_forge.spop.frame import Disconnect
@@ -11,6 +13,7 @@ from spoe_forge.spop.frame import Frame
 from spoe_forge.spop.frame import HaproxyHello
 from spoe_forge.spop.frame import Notify
 from spoe_forge.spop.spop_types import SetVarAction
+from tests.utils import create_stream_reader
 
 
 def test_frame_registry_contains_all_types():
@@ -188,8 +191,32 @@ async def test_encode_raises_on_size_limit():
         messages=large_messages,
     )
 
-    with pytest.raises(SpopEncodeError, match="frame size .* exceeds max"):
+    with pytest.raises(SpopFrameTooBigError, match="frame size .* exceeds max"):
         frame.encode(max_frame_size=100)  # Very small max size
+
+
+@pytest.mark.asyncio
+async def test_decode_raises_on_oversized_frame():
+    reader = create_stream_reader(struct.pack("!I", 100_000))
+
+    with pytest.raises(SpopFrameTooBigError, match="exceeds maximum size"):
+        await Frame.decode(reader, 4096)
+
+
+@pytest.mark.asyncio
+async def test_decode_accepts_frame_exactly_at_size_limit():
+    frame = Frame.construct(
+        frame_type=FrameType.ACK,
+        stream_id=1,
+        frame_id=1,
+        actions=[],
+    )
+
+    encoded = frame.encode(max_frame_size=16384)
+    reader = create_stream_reader(encoded)
+    decoded = await Frame.decode(reader, len(encoded))
+
+    assert isinstance(decoded, Ack)
 
 
 @pytest.mark.asyncio
