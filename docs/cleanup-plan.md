@@ -15,8 +15,8 @@ pattern (h11/h2): parsing and serialization work on buffers, transport stays wit
 | 1 | fix: correct self-comparison in SPOP version compatibility check | merged (PR #13) |
 | 2 | refactor: make SPOP decode path synchronous | merged (PR #14) |
 | 3 | refactor: make SPOP encode path synchronous | merged (PR #15) |
-| 4 | refactor: make frame construction and negotiation synchronous | in review |
-| 5 | chore: fix CLAUDE.md drift and small cleanups | todo |
+| 4 | refactor: make frame construction and negotiation synchronous | merged (PR #16) |
+| 5 | chore: fix CLAUDE.md drift and small cleanups | in review |
 
 ### 1. fix: correct self-comparison in SPOP version compatibility check
 `configuration.py:48` compares `floor(float_ha_ver)` to itself, so the major-version guard never

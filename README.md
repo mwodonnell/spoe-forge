@@ -10,8 +10,8 @@ that communicate with HAProxy using the SPOA protocol.
 ## Overview
 
 SPOE Forge provides a clean, decorator-based API for creating agents that process HAProxy messages
-and return actions. Built with async/await throughout, it's designed for high-performance production
-environments. *Or at least as performant as python will allow.*
+and return actions. Built on an async I/O core with synchronous protocol parsing, it's designed for
+high-performance production environments. *Or at least as performant as python will allow.*
 
 ### Why SPOE Forge?
 

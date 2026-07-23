@@ -3,9 +3,8 @@ from abc import ABC
 from abc import abstractmethod
 from asyncio import IncompleteReadError
 from asyncio import StreamReader
-from typing import Callable
+from collections.abc import Callable
 from typing import ClassVar
-from typing import Type
 
 from spoe_forge.exception import SpoeForgeError
 from spoe_forge.spop.constants import FrameType
@@ -44,7 +43,7 @@ class Frame(ABC):
     frame_type: FrameType
     metadata: MetaData
 
-    _registry: ClassVar[dict[FrameType, Type["Frame"]]] = {}
+    _registry: ClassVar[dict[FrameType, type["Frame"]]] = {}
 
     def __init__(self, frame_type: FrameType, metadata: MetaData):
         """
@@ -75,7 +74,7 @@ class Frame(ABC):
         return decorator
 
     @classmethod
-    def get_frame_class(cls, frame_type: FrameType) -> Type["Frame"]:
+    def get_frame_class(cls, frame_type: FrameType) -> type["Frame"]:
         """
         Retrieve Frame class for a given frame type.
 
@@ -320,7 +319,7 @@ class HaproxyHello(Frame):
     supported_versions: list[str]
     max_frame_size: int
     capabilities: list[str]
-    engine_id: str = None
+    engine_id: str | None = None
     healthcheck: bool = False
 
     def encode_payload(self) -> bytes:

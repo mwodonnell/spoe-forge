@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import logging
 import sys
 
 from spoe_forge.exception import SpoeForgeError
@@ -11,7 +12,7 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8500
 DEFAULT_FRAME_SIZE = 1024 * 4
 
-logger = create_logger(debug=False)
+logger = logging.getLogger(__name__)
 
 
 async def healthcheck(host: str, port: int, quiet: bool) -> bool:
@@ -79,6 +80,8 @@ def healthcheck_command(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
+    create_logger(debug=False)
+
     parser = argparse.ArgumentParser(
         prog="spoe-forge",
         description="SPOE Forge CLI utilities",
