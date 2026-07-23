@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import patch
 
 import pytest
@@ -112,6 +113,36 @@ async def test_handle_message_passes_context_to_handler():
     assert captured_context is not None
     assert captured_context._message == "test-message"
     assert captured_context._args == args
+
+
+@pytest.mark.asyncio
+async def test_handle_message_awaits_async_handler():
+    registry = AgentRegistry()
+
+    async def handler(ctx: AgentContext):
+        await asyncio.sleep(0)
+        return [SetVarAction(scope=ActionScope.SESSION, name="async", value=1)]
+
+    registry.register("test-message", handler)
+
+    result = await registry.handle_message("test-message", {})
+
+    assert len(result) == 1
+    assert result[0].name == "async"
+
+
+@pytest.mark.asyncio
+async def test_handle_message_wraps_async_handler_exception():
+    registry = AgentRegistry()
+
+    async def handler(ctx: AgentContext):
+        raise ValueError("async boom")
+
+    registry.register("test-message", handler)
+
+    with patch("spoe_forge.agent.registry.logger"):
+        with pytest.raises(SpoeAgentError):
+            await registry.handle_message("test-message", {})
 
 
 @pytest.mark.asyncio
