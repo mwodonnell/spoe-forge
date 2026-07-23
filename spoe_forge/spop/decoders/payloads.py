@@ -1,5 +1,6 @@
 import logging
 
+from spoe_forge.spop.constants import ActionNBArgs
 from spoe_forge.spop.constants import ActionType
 from spoe_forge.spop.constants import ActionScope
 from spoe_forge.spop.constants import FrameFlag
@@ -159,11 +160,19 @@ def decode_list_of_actions(
 
     actions = []
     while offset < end:
+        if offset + 3 > len(buf):
+            raise SpopDecodeError(
+                "unexpected end of stream decoding action header",
+            )
+
         try:
             action = ActionType(buf[offset])
         except ValueError:
             raise SpopDecodeError(f"invalid action type: {buf[offset]}")
-        offset += 2  # Skip NB-ARGS byte
+        offset += 1
+
+        nb_args = buf[offset]
+        offset += 1
 
         try:
             scope = ActionScope(buf[offset])
@@ -172,6 +181,11 @@ def decode_list_of_actions(
         offset += 1
 
         if action == ActionType.SET_VAR:
+            if nb_args != ActionNBArgs.SET_VAR:
+                raise SpopDecodeError(
+                    f"unexpected NB-ARGS {nb_args} for SET_VAR action",
+                )
+
             arg, val, offset = _parse_kv_pair(buf, offset)
             actions.append(
                 SetVarAction(
@@ -182,6 +196,11 @@ def decode_list_of_actions(
             )
 
         elif action == ActionType.UNSET_VAR:
+            if nb_args != ActionNBArgs.UNSET_VAR:
+                raise SpopDecodeError(
+                    f"unexpected NB-ARGS {nb_args} for UNSET_VAR action",
+                )
+
             arg, offset = decode_string(buf, offset)
             actions.append(
                 UnsetVarAction(

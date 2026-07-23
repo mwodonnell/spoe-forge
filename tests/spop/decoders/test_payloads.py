@@ -200,6 +200,25 @@ def test_decode_list_of_actions_empty():
     assert offset == 0
 
 
+def test_decode_list_of_actions_raises_on_truncated_buffer():
+    with pytest.raises(SpopDecodeError, match="unexpected end of stream"):
+        payload.decode_list_of_actions(b"\x01", 0, 5)
+
+
+def test_decode_list_of_actions_raises_on_bad_set_var_nb_args():
+    test_buf = b"\x01\x05\x01\x01a\x04\x01"
+
+    with pytest.raises(SpopDecodeError, match="unexpected NB-ARGS 5 for SET_VAR"):
+        payload.decode_list_of_actions(test_buf, 0, len(test_buf))
+
+
+def test_decode_list_of_actions_raises_on_bad_unset_var_nb_args():
+    test_buf = b"\x02\x05\x03\x01b"
+
+    with pytest.raises(SpopDecodeError, match="unexpected NB-ARGS 5 for UNSET_VAR"):
+        payload.decode_list_of_actions(test_buf, 0, len(test_buf))
+
+
 def test_decode_list_of_actions_multiple():
     test_buf = b"\x01\x03\x01\x01a\x04\x01\x02\x02\x03\x01b"
 
