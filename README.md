@@ -24,6 +24,7 @@ protocol in python.
 
 -   **Simple decorator-based API** - Register message handlers with `@agent.message()`
 -   **Sync and async handlers** - Plain functions run in a worker thread; `async def` handlers run on the event loop
+-   **Embeddable** - Blocking `agent.run()`, or `await agent.serve()` inside an existing event loop; both accept an `ssl` context for TLS to HAProxy
 -   **Full SPOP protocol support** - Complete implementation of the SPOA protocol
 -   **Health check support** - Built-in HAProxy health check handling
 

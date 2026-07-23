@@ -19,9 +19,9 @@ robustness boundary (unbounded input, charset assumptions, silent truncation, ha
 | 4 | feat: support async message handlers | merged (PR #23) |
 | 5 | fix: keep decode errors within SpopDecodeError contract | merged (PR #24) |
 | 6 | refactor: Messages as ordered sequence (match SPOA prior art) | merged (PR #25) |
-| 7 | fix: compare SPOP versions as (major, minor) tuples | in review (bundled PR) |
-| 8 | fix: handler failures ACK empty instead of disconnecting | in review (bundled PR) |
-| 9 | feat: public serve(), ssl passthrough, clean shutdown | todo |
+| 7 | fix: compare SPOP versions as (major, minor) tuples | merged (PR #26) |
+| 8 | fix: handler failures ACK empty instead of disconnecting | merged (PR #26) |
+| 9 | feat: public serve(), ssl passthrough, clean shutdown | in review |
 | 10 | chore: packaging fixes + delete tracking docs | todo |
 
 ### 1. fix: enforce max frame size on inbound frames

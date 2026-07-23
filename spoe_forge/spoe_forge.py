@@ -3,6 +3,7 @@ from asyncio import StreamReader
 from asyncio import StreamWriter
 from logging import Logger
 from functools import cached_property
+from ssl import SSLContext
 from typing import Callable
 
 
@@ -120,20 +121,24 @@ class SpoeForge:
 
         await handler.core_handler()
 
-    async def _start_server(self, host: str, port: int) -> None:
+    async def serve(self, host: str, port: int, ssl: SSLContext | None = None) -> None:
         """
-        Start AsyncIO server and listen for connections.
+        Serve the agent on the current event loop until cancelled.
+
+        Use this instead of run() to embed the agent in an application that
+        already runs its own event loop.
 
         :param str host: Host address to bind to
         :param int port: Port to listen on
+        :param SSLContext ssl: Optional TLS context for the HAProxy connection
         """
-        server = await asyncio.start_server(self._handler, host, port)
+        server = await asyncio.start_server(self._handler, host, port, ssl=ssl)
         self._logger.info(f"SPOE Forge listening on {host}:{port}")
 
         async with server:
             await server.serve_forever()
 
-    def run(self, host: str, port: int) -> None:
+    def run(self, host: str, port: int, ssl: SSLContext | None = None) -> None:
         """
         Start the SPOE Forge server (blocking).
 
@@ -141,5 +146,9 @@ class SpoeForge:
 
         :param str host: Host address to bind to
         :param int port: Port to listen on
+        :param SSLContext ssl: Optional TLS context for the HAProxy connection
         """
-        asyncio.run(self._start_server(host, port))
+        try:
+            asyncio.run(self.serve(host, port, ssl=ssl))
+        except KeyboardInterrupt:
+            self._logger.info("SPOE Forge shutting down")
