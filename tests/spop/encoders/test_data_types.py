@@ -205,6 +205,46 @@ def test_encode_dt_uint64():
         assert result == b"\x05\x01"
 
 
+@pytest.mark.parametrize(
+    "encoder_name,value",
+    [
+        ("encode_dt_int32", 2**31),
+        ("encode_dt_int32", -(2**31) - 1),
+        ("encode_dt_int64", 2**63),
+        ("encode_dt_int64", -(2**63) - 1),
+        ("encode_dt_int64", 2**70),
+        ("encode_dt_uint32", -1),
+        ("encode_dt_uint32", 2**32),
+        ("encode_dt_uint64", -1),
+        ("encode_dt_uint64", 2**64),
+    ],
+)
+def test_encode_dt_int_rejects_out_of_range(encoder_name, value):
+    encoder_func = getattr(data_type, encoder_name)
+
+    with pytest.raises(SpopEncodeError, match="out of range"):
+        encoder_func(value)
+
+
+@pytest.mark.parametrize(
+    "encoder_name,value",
+    [
+        ("encode_dt_int32", 2**31 - 1),
+        ("encode_dt_int32", -(2**31)),
+        ("encode_dt_int64", 2**63 - 1),
+        ("encode_dt_int64", -(2**63)),
+        ("encode_dt_uint32", 2**32 - 1),
+        ("encode_dt_uint32", 0),
+        ("encode_dt_uint64", 2**64 - 1),
+        ("encode_dt_uint64", 0),
+    ],
+)
+def test_encode_dt_int_accepts_boundaries(encoder_name, value):
+    encoder_func = getattr(data_type, encoder_name)
+
+    assert isinstance(encoder_func(value), bytes)
+
+
 def test_encode_dt_bool_true():
     result = data_type.encode_dt_bool(True)
 

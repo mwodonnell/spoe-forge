@@ -1,8 +1,13 @@
-import ctypes
 import ipaddress
 import logging
 import struct
 
+from spoe_forge.spop.constants import INT32_MAX
+from spoe_forge.spop.constants import INT32_MIN
+from spoe_forge.spop.constants import INT64_MAX
+from spoe_forge.spop.constants import INT64_MIN
+from spoe_forge.spop.constants import UINT32_MAX
+from spoe_forge.spop.constants import UINT64_MAX
 from spoe_forge.spop.constants import DataFlag
 from spoe_forge.spop.constants import DataType
 from spoe_forge.spop.exception import SpopEncodeError
@@ -145,14 +150,11 @@ def encode_dt_int32(val: int) -> bytes:
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    # Convert signed to unsigned representation for varint encoding
-    try:
-        unsigned_val = ctypes.c_uint32(val).value
-    except ValueError:
-        raise SpopEncodeError(
-            f"cannot encode INT32 value to SPOP: {val!r}",
-        )
-    return _type_data(DataType.INT32) + _compose_varint(unsigned_val)
+    if not INT32_MIN <= val <= INT32_MAX:
+        raise SpopEncodeError(f"INT32 value out of range: {val}")
+
+    # Convert signed to unsigned two's complement representation for varint encoding
+    return _type_data(DataType.INT32) + _compose_varint(val & UINT32_MAX)
 
 
 def encode_dt_int64(val: int) -> bytes:
@@ -162,14 +164,11 @@ def encode_dt_int64(val: int) -> bytes:
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    # Convert signed to unsigned representation for varint encoding
-    try:
-        unsigned_val = ctypes.c_uint64(val).value
-    except ValueError:
-        raise SpopEncodeError(
-            f"cannot encode INT64 value to SPOP: {val!r}",
-        )
-    return _type_data(DataType.INT64) + _compose_varint(unsigned_val)
+    if not INT64_MIN <= val <= INT64_MAX:
+        raise SpopEncodeError(f"INT64 value out of range: {val}")
+
+    # Convert signed to unsigned two's complement representation for varint encoding
+    return _type_data(DataType.INT64) + _compose_varint(val & UINT64_MAX)
 
 
 def encode_dt_uint32(val: int) -> bytes:
@@ -179,14 +178,10 @@ def encode_dt_uint32(val: int) -> bytes:
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    # Ensure value fits in uint32
-    try:
-        unsigned_val = ctypes.c_uint32(val).value
-    except ValueError:
-        raise SpopEncodeError(
-            f"cannot encode UINT32 value to SPOP: {val!r}",
-        )
-    return _type_data(DataType.UINT32) + _compose_varint(unsigned_val)
+    if not 0 <= val <= UINT32_MAX:
+        raise SpopEncodeError(f"UINT32 value out of range: {val}")
+
+    return _type_data(DataType.UINT32) + _compose_varint(val)
 
 
 def encode_dt_uint64(val: int) -> bytes:
@@ -196,14 +191,10 @@ def encode_dt_uint64(val: int) -> bytes:
     :param int val: Integer value to encode
     :return: Encoded bytes
     """
-    # Ensure value fits in uint64
-    try:
-        unsigned_val = ctypes.c_uint64(val).value
-    except ValueError:
-        raise SpopEncodeError(
-            f"cannot encode UINT64 value to SPOP: {val!r}",
-        )
-    return _type_data(DataType.UINT64) + _compose_varint(unsigned_val)
+    if not 0 <= val <= UINT64_MAX:
+        raise SpopEncodeError(f"UINT64 value out of range: {val}")
+
+    return _type_data(DataType.UINT64) + _compose_varint(val)
 
 
 def encode_dt_bool(val: bool) -> bytes:

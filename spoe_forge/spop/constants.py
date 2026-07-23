@@ -16,6 +16,13 @@ from typing import Final
 SPOP_PROTOCOL_VERSION_SUPPORTED: Final[str] = "2.0"
 SPOP_PROTOCOL_CAPABILITIES: Final[str] = ""
 
+INT32_MIN: Final[int] = -(2**31)
+INT32_MAX: Final[int] = 2**31 - 1
+INT64_MIN: Final[int] = -(2**63)
+INT64_MAX: Final[int] = 2**63 - 1
+UINT32_MAX: Final[int] = 2**32 - 1
+UINT64_MAX: Final[int] = 2**64 - 1
+
 
 class DataFlag(IntFlag):
     """
