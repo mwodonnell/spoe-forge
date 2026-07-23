@@ -13,7 +13,7 @@ from spoe_forge.spop.spop_types import SpoaDec
 logger = logging.getLogger(__name__)
 
 
-async def _parse_varint(buf: bytes, offset=0) -> SpoaDec[int]:
+def _parse_varint(buf: bytes, offset=0) -> SpoaDec[int]:
     """
     Decode Varint from SPOA protocol.
 
@@ -58,7 +58,7 @@ async def _parse_varint(buf: bytes, offset=0) -> SpoaDec[int]:
         shift += 7
 
 
-async def decode_tiny_int(buf: bytes, offset=0) -> SpoaDec[int]:
+def decode_tiny_int(buf: bytes, offset=0) -> SpoaDec[int]:
     """
     Decode 1 byte integer from SPOA protocol.
 
@@ -76,7 +76,7 @@ async def decode_tiny_int(buf: bytes, offset=0) -> SpoaDec[int]:
     return buf[offset], offset + 1
 
 
-async def decode_frame_len(len_buf: bytes) -> int:
+def decode_frame_len(len_buf: bytes) -> int:
     try:
         (frame_len,) = struct.unpack("!I", len_buf)
     except struct.error:
@@ -85,7 +85,7 @@ async def decode_frame_len(len_buf: bytes) -> int:
     return frame_len
 
 
-async def decode_int32(buf: bytes, offset=0) -> SpoaDec[int]:
+def decode_int32(buf: bytes, offset=0) -> SpoaDec[int]:
     """
     Decode INT32 from SPOA protocol
 
@@ -93,11 +93,11 @@ async def decode_int32(buf: bytes, offset=0) -> SpoaDec[int]:
     :param offset: offset to start reading from
     :return: Tuple of the parsed integer, and the adjusted offset
     """
-    val, offset = await _parse_varint(buf, offset)
+    val, offset = _parse_varint(buf, offset)
     return ctypes.c_int32(val).value, offset
 
 
-async def decode_int64(buf: bytes, offset=0) -> SpoaDec[int]:
+def decode_int64(buf: bytes, offset=0) -> SpoaDec[int]:
     """
     Decode INT64 from SPOA protocol
 
@@ -105,11 +105,11 @@ async def decode_int64(buf: bytes, offset=0) -> SpoaDec[int]:
     :param offset: offset to start reading from
     :return: Tuple of the parsed integer, and the adjusted offset
     """
-    val, offset = await _parse_varint(buf, offset)
+    val, offset = _parse_varint(buf, offset)
     return ctypes.c_int64(val).value, offset
 
 
-async def decode_uint32(buf: bytes, offset=0) -> SpoaDec[int]:
+def decode_uint32(buf: bytes, offset=0) -> SpoaDec[int]:
     """
     Decode UINT32 from SPOA protocol
 
@@ -117,11 +117,11 @@ async def decode_uint32(buf: bytes, offset=0) -> SpoaDec[int]:
     :param offset: offset to start reading from
     :return: Tuple of the parsed integer, and the adjusted offset
     """
-    val, offset = await _parse_varint(buf, offset)
+    val, offset = _parse_varint(buf, offset)
     return ctypes.c_uint32(val).value, offset
 
 
-async def decode_uint64(buf: bytes, offset=0) -> SpoaDec[int]:
+def decode_uint64(buf: bytes, offset=0) -> SpoaDec[int]:
     """
     Decode UINT64 from SPOA protocol
 
@@ -129,11 +129,11 @@ async def decode_uint64(buf: bytes, offset=0) -> SpoaDec[int]:
     :param offset: offset to start reading from
     :return: Tuple of the parsed integer, and the adjusted offset
     """
-    val, offset = await _parse_varint(buf, offset)
+    val, offset = _parse_varint(buf, offset)
     return ctypes.c_uint64(val).value, offset
 
 
-async def decode_bool(buf: bytes, offset=0) -> SpoaDec[bool]:
+def decode_bool(buf: bytes, offset=0) -> SpoaDec[bool]:
     """
     Decode boolean from SPOA protocol
 
@@ -153,7 +153,7 @@ async def decode_bool(buf: bytes, offset=0) -> SpoaDec[bool]:
     return buf[offset] & DataTypeMask.FLAG == DataFlag.BOOL_TRUE, offset + 1
 
 
-async def decode_ipv4(buf: bytes, offset=0) -> SpoaDec[ipaddress.IPv4Address]:
+def decode_ipv4(buf: bytes, offset=0) -> SpoaDec[ipaddress.IPv4Address]:
     """
     Decode IPv4 from SPOA protocol. IPv4 always takes 4 bytes
 
@@ -170,7 +170,7 @@ async def decode_ipv4(buf: bytes, offset=0) -> SpoaDec[ipaddress.IPv4Address]:
     return ipaddress.IPv4Address(buf[offset:end]), end
 
 
-async def decode_ipv6(buf: bytes, offset=0) -> SpoaDec[ipaddress.IPv6Address]:
+def decode_ipv6(buf: bytes, offset=0) -> SpoaDec[ipaddress.IPv6Address]:
     """
     Decode IPv6 from SPOA protocol. IPv6 always takes 16 bytes
 
@@ -187,7 +187,7 @@ async def decode_ipv6(buf: bytes, offset=0) -> SpoaDec[ipaddress.IPv6Address]:
     return ipaddress.IPv6Address(buf[offset:end]), end
 
 
-async def decode_binary(buf: bytes, offset=0) -> SpoaDec[bytes]:
+def decode_binary(buf: bytes, offset=0) -> SpoaDec[bytes]:
     """
     Decode binary from SPOA protocol
 
@@ -195,7 +195,7 @@ async def decode_binary(buf: bytes, offset=0) -> SpoaDec[bytes]:
     :param offset: offset to start reading from
     :return: Tuple of the parsed bytes and the adjusted offset
     """
-    bin_len, offset = await _parse_varint(buf, offset)
+    bin_len, offset = _parse_varint(buf, offset)
     end = offset + bin_len
 
     if len(buf) < end:
@@ -206,7 +206,7 @@ async def decode_binary(buf: bytes, offset=0) -> SpoaDec[bytes]:
     return buf[offset:end], end
 
 
-async def decode_string(buf: bytes, offset=0) -> SpoaDec[str]:
+def decode_string(buf: bytes, offset=0) -> SpoaDec[str]:
     """
     Decode string from SPOA protocol
 
@@ -216,14 +216,14 @@ async def decode_string(buf: bytes, offset=0) -> SpoaDec[str]:
     :param offset: offset to start reading from
     :return: Tuple of the parsed string, and the adjusted offset
     """
-    _bytes, offset = await decode_binary(buf, offset)
+    _bytes, offset = decode_binary(buf, offset)
     try:
         return _bytes.decode("ascii"), offset
     except UnicodeDecodeError as e:
         raise SpopDecodeError(f"invalid ASCII string in SPOP stream: {e}")
 
 
-async def auto_decode_var(buf: bytes, offset=0) -> SpoaDec[SpoaDataType]:
+def auto_decode_var(buf: bytes, offset=0) -> SpoaDec[SpoaDataType]:
     """
     Decode var from SPOA protocol
 
@@ -249,31 +249,31 @@ async def auto_decode_var(buf: bytes, offset=0) -> SpoaDec[SpoaDataType]:
 
     elif val_type == DataType.BOOL:
         offset -= 1  # Bools are derived from the same offset as the datatype byte
-        val, offset = await decode_bool(buf, offset)
+        val, offset = decode_bool(buf, offset)
 
     elif val_type == DataType.INT32:
-        val, offset = await decode_int32(buf, offset)
+        val, offset = decode_int32(buf, offset)
 
     elif val_type == DataType.UINT32:
-        val, offset = await decode_uint32(buf, offset)
+        val, offset = decode_uint32(buf, offset)
 
     elif val_type == DataType.INT64:
-        val, offset = await decode_int64(buf, offset)
+        val, offset = decode_int64(buf, offset)
 
     elif val_type == DataType.UINT64:
-        val, offset = await decode_uint64(buf, offset)
+        val, offset = decode_uint64(buf, offset)
 
     elif val_type == DataType.IPV4:
-        val, offset = await decode_ipv4(buf, offset)
+        val, offset = decode_ipv4(buf, offset)
 
     elif val_type == DataType.IPV6:
-        val, offset = await decode_ipv6(buf, offset)
+        val, offset = decode_ipv6(buf, offset)
 
     elif val_type == DataType.STRING:
-        val, offset = await decode_string(buf, offset)
+        val, offset = decode_string(buf, offset)
 
     elif val_type == DataType.BINARY:
-        val, offset = await decode_binary(buf, offset)
+        val, offset = decode_binary(buf, offset)
 
     else:
         raise SpopDecodeError(f"unknown data type {val_type}")
