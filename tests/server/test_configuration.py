@@ -76,6 +76,24 @@ def test_check_version_compatibility_same_major_higher_minor():
     assert config.is_compatible is True
 
 
+def test_check_version_compatibility_double_digit_minor():
+    config = ServerConfiguration()
+
+    config._check_version_compatibility(["2.10"])
+
+    assert config.is_compatible is True
+
+
+def test_check_version_compatibility_skips_malformed_version():
+    config = ServerConfiguration()
+
+    with patch("spoe_forge.server.configuration.logger") as mock_logger:
+        config._check_version_compatibility(["garbage", "2.0"])
+
+        assert config.is_compatible is True
+        mock_logger.warning.assert_called_once()
+
+
 def test_check_version_compatibility_multiple_versions():
     config = ServerConfiguration()
 

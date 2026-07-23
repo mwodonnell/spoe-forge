@@ -1,11 +1,15 @@
 import logging
-from math import floor
 
 from spoe_forge.server.constants import DEFAULT_MAX_FRAME_SIZE
 from spoe_forge.server.constants import SPOE_CAPABILITIES
 from spoe_forge.server.constants import SPOE_VERSION
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_version(version: str) -> tuple[int, int]:
+    major, minor = version.split(".")
+    return int(major), int(minor)
 
 
 class ServerConfiguration:
@@ -40,15 +44,25 @@ class ServerConfiguration:
         """
         Check if server version is compatible with HAProxy versions.
 
+        Versions compare as (major, minor) int tuples - float comparison would
+        mis-order double-digit minors like "2.10".
+
         :param list[str] ha_versions: Versions supported by HAProxy
         """
-        float_ver = float(self._version)
+        ver = _parse_version(self._version)
         for version in ha_versions:
-            float_ha_ver = float(version)
-            if floor(float_ver) != floor(float_ha_ver):
+            try:
+                ha_ver = _parse_version(version)
+            except ValueError:
+                logger.warning(
+                    f"Ignoring malformed SPOP version from HAProxy: {version!r}"
+                )
                 continue
 
-            if float_ver <= float_ha_ver:
+            if ver[0] != ha_ver[0]:
+                continue
+
+            if ver <= ha_ver:
                 self._server_compatible = True
                 return
 
