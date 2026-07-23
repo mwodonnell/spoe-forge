@@ -30,10 +30,7 @@ class AgentContext:
         :param default: Default value to return if argument is not present.
         :return: Argument value, or None if not found
         """
-        try:
-            return self._args[arg]
-        except KeyError:
-            return default
+        return self._args.get(arg, default)
 
     def get_args(self) -> dict[str, SpoaDataType]:
         """

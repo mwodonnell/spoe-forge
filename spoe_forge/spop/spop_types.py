@@ -1,7 +1,7 @@
 """
 SPOP Protocol Type Definitions
 
-Pydantic models and type aliases for the more complex SPOE protocol data structures.
+Dataclasses and type aliases for the more complex SPOE protocol data structures.
 """
 
 import ipaddress

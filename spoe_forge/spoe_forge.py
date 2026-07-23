@@ -103,8 +103,7 @@ class SpoeForge:
             self._logger.info(
                 f"{self.name} handled '{message}', returned {len(handler_actions)} action(s)"
             )
-            if handler_actions:
-                actions.extend(handler_actions)
+            actions.extend(handler_actions)
 
         return actions
 
