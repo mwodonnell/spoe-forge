@@ -75,7 +75,7 @@ class Frame(ABC):
         return decorator
 
     @classmethod
-    async def get_frame_class(cls, frame_type: FrameType) -> Type["Frame"]:
+    def get_frame_class(cls, frame_type: FrameType) -> Type["Frame"]:
         """
         Retrieve Frame class for a given frame type.
 
@@ -146,7 +146,7 @@ class Frame(ABC):
             )
 
         # HAProxy sends Frame len as an unencoded UINT32 - can't use data_decoder
-        frame_len = await decode_frame_len(len_buf)
+        frame_len = decode_frame_len(len_buf)
         logger.debug(f"Frame length: {frame_len} bytes")
 
         try:
@@ -171,7 +171,7 @@ class Frame(ABC):
 
         logger.debug(f"Identified {frame_type.name} frame type from stream")
 
-        metadata, offset = await decode_metadata(frame_buf, offset)
+        metadata, offset = decode_metadata(frame_buf, offset)
 
         logger.debug(
             f"Frame metadata: stream_id={metadata.stream_id}, "
@@ -179,9 +179,9 @@ class Frame(ABC):
             f"ABORT={metadata.flags.ABORT}"
         )
 
-        frame_class = await cls.get_frame_class(frame_type)
+        frame_class = cls.get_frame_class(frame_type)
         try:
-            frame, offset = await frame_class(frame_type, metadata).decode_payload(
+            frame, offset = frame_class(frame_type, metadata).decode_payload(
                 frame_buf, offset, frame_len
             )
         except KeyError as e:
@@ -217,7 +217,7 @@ class Frame(ABC):
         :return: Constructed Frame object
         :raises SpoeForgeError: If required payload arguments missing
         """
-        frame_class = await cls.get_frame_class(frame_type)
+        frame_class = cls.get_frame_class(frame_type)
 
         logger.debug(
             f"Constructing {frame_type.name} frame: "
@@ -255,9 +255,7 @@ class Frame(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def decode_payload(
-        self, buf: bytes, offset: int, end: int
-    ) -> SpoaDec["Frame"]:
+    def decode_payload(self, buf: bytes, offset: int, end: int) -> SpoaDec["Frame"]:
         """
         Decode frame-specific payload from bytes.
 
@@ -338,10 +336,10 @@ class HaproxyHello(Frame):
 
         return await encode_kv_list(payload)
 
-    async def decode_payload(
+    def decode_payload(
         self, buf: bytes, offset: int, end: int
     ) -> SpoaDec["HaproxyHello"]:
-        payload, offset = await decode_kv_list(buf, offset=offset, end=end)
+        payload, offset = decode_kv_list(buf, offset=offset, end=end)
 
         self.supported_versions = self.from_spop_list(payload["supported-versions"])
         self.max_frame_size = payload["max-frame-size"]
@@ -387,10 +385,10 @@ class AgentHello(Frame):
 
         return await encode_kv_list(payload)
 
-    async def decode_payload(
+    def decode_payload(
         self, buf: bytes, offset: int, end: int
     ) -> SpoaDec["AgentHello"]:
-        payload, offset = await decode_kv_list(buf, offset=offset, end=end)
+        payload, offset = decode_kv_list(buf, offset=offset, end=end)
 
         self.version = payload["version"]
         self.max_frame_size = payload["max-frame-size"]
@@ -430,10 +428,10 @@ class Disconnect(Frame):
 
         return await encode_kv_list(payload)
 
-    async def decode_payload(
+    def decode_payload(
         self, buf: bytes, offset: int, end: int
     ) -> SpoaDec["Disconnect"]:
-        payload, offset = await decode_kv_list(buf, offset=offset, end=end)
+        payload, offset = decode_kv_list(buf, offset=offset, end=end)
 
         self.status_code = payload["status-code"]
         self.message = payload["message"]
@@ -464,12 +462,8 @@ class Notify(Frame):
     async def encode_payload(self) -> bytes:
         return await encode_message_list(self.messages)
 
-    async def decode_payload(
-        self, buf: bytes, offset: int, end: int
-    ) -> SpoaDec["Notify"]:
-        self.messages, offset = await decode_list_of_messages(
-            buf, offset=offset, end=end
-        )
+    def decode_payload(self, buf: bytes, offset: int, end: int) -> SpoaDec["Notify"]:
+        self.messages, offset = decode_list_of_messages(buf, offset=offset, end=end)
 
         return self, offset
 
@@ -498,8 +492,8 @@ class Ack(Frame):
 
         return await encode_action_list(self.actions)
 
-    async def decode_payload(self, buf: bytes, offset: int, end: int) -> SpoaDec["Ack"]:
-        self.actions, offset = await decode_list_of_actions(buf, offset=offset, end=end)
+    def decode_payload(self, buf: bytes, offset: int, end: int) -> SpoaDec["Ack"]:
+        self.actions, offset = decode_list_of_actions(buf, offset=offset, end=end)
 
         return self, offset
 

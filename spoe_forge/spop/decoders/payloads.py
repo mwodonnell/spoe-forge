@@ -19,7 +19,7 @@ from spoe_forge.spop.spop_types import SpoaDec
 logger = logging.getLogger(__name__)
 
 
-async def _parse_kv_pair(buf: bytes, offset=0) -> tuple[str, SpoaDataType, int]:
+def _parse_kv_pair(buf: bytes, offset=0) -> tuple[str, SpoaDataType, int]:
     """
     Decode key-value pair from SPOA protocol.
 
@@ -27,13 +27,13 @@ async def _parse_kv_pair(buf: bytes, offset=0) -> tuple[str, SpoaDataType, int]:
     :param int offset: Offset to start reading from
     :return: Tuple of (key, value, adjusted offset)
     """
-    key, offset = await decode_string(buf, offset)
-    val, offset = await auto_decode_var(buf, offset)
+    key, offset = decode_string(buf, offset)
+    val, offset = auto_decode_var(buf, offset)
 
     return key, val, offset
 
 
-async def decode_metadata(buf: bytes, offset=0) -> SpoaDec[MetaData]:
+def decode_metadata(buf: bytes, offset=0) -> SpoaDec[MetaData]:
     """
     Decode frame metadata from SPOA protocol.
 
@@ -44,7 +44,7 @@ async def decode_metadata(buf: bytes, offset=0) -> SpoaDec[MetaData]:
     :return: Tuple of MetaData object and adjusted offset
     """
     end = offset + 4
-    if end >= len(buf):
+    if end > len(buf):
         raise SpopDecodeError(
             "unexpected end of stream decoding metadata",
         )
@@ -59,12 +59,12 @@ async def decode_metadata(buf: bytes, offset=0) -> SpoaDec[MetaData]:
 
     offset = end
     try:
-        stream_id, offset = await decode_int64(buf, offset)
+        stream_id, offset = decode_int64(buf, offset)
     except SpopDecodeError as e:
         raise SpopDecodeError(f"error decoding stream_id in metadata: {e}")
 
     try:
-        frame_id, offset = await decode_int64(buf, offset)
+        frame_id, offset = decode_int64(buf, offset)
     except SpopDecodeError as e:
         raise SpopDecodeError(f"error decoding frame_id in metadata: {e}")
 
@@ -75,7 +75,7 @@ async def decode_metadata(buf: bytes, offset=0) -> SpoaDec[MetaData]:
     ), offset
 
 
-async def decode_kv_list(
+def decode_kv_list(
     buf: bytes, offset: int = 0, end: int = 0
 ) -> SpoaDec[dict[str, SpoaDataType]]:
     """
@@ -94,14 +94,14 @@ async def decode_kv_list(
 
     payload = {}
     while offset < end:
-        key, val, offset = await _parse_kv_pair(buf, offset)
+        key, val, offset = _parse_kv_pair(buf, offset)
         payload[key] = val
 
     logger.debug(f"Decoded KV list: {len(payload)} pairs")
     return payload, offset
 
 
-async def decode_list_of_messages(
+def decode_list_of_messages(
     buf: bytes, offset: int = 0, end: int = 0
 ) -> SpoaDec[dict[str, dict[str, SpoaDataType]]]:
     """
@@ -120,12 +120,12 @@ async def decode_list_of_messages(
 
     payload = {}
     while offset < end:
-        message, offset = await decode_string(buf, offset)
-        num_args, offset = await decode_tiny_int(buf, offset)
+        message, offset = decode_string(buf, offset)
+        num_args, offset = decode_tiny_int(buf, offset)
 
         args = {}
         for _ in range(num_args):
-            k, v, offset = await _parse_kv_pair(buf, offset)
+            k, v, offset = _parse_kv_pair(buf, offset)
 
             if k in args:
                 raise SpopDecodeError(
@@ -140,7 +140,7 @@ async def decode_list_of_messages(
     return payload, offset
 
 
-async def decode_list_of_actions(
+def decode_list_of_actions(
     buf: bytes, offset: int = 0, end: int = 0
 ) -> SpoaDec[list[Action]]:
     """
@@ -157,10 +157,6 @@ async def decode_list_of_actions(
     """
     logger.debug(f"Decoding action list: {end - offset} bytes to process")
 
-    if len(buf) == end + 1:
-        # Action lists can be empty - we don't throw an error here, instead return an empty list
-        return [], offset
-
     actions = []
     while offset < end:
         try:
@@ -176,7 +172,7 @@ async def decode_list_of_actions(
         offset += 1
 
         if action == ActionType.SET_VAR:
-            arg, val, offset = await _parse_kv_pair(buf, offset)
+            arg, val, offset = _parse_kv_pair(buf, offset)
             actions.append(
                 SetVarAction(
                     scope=scope,
@@ -186,7 +182,7 @@ async def decode_list_of_actions(
             )
 
         elif action == ActionType.UNSET_VAR:
-            arg, offset = await decode_string(buf, offset)
+            arg, offset = decode_string(buf, offset)
             actions.append(
                 UnsetVarAction(
                     scope=scope,

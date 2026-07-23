@@ -16,7 +16,7 @@ async def test_roundtrip_kv_pair(kv_pair_data):
     key, value, desc = kv_pair_data
 
     encoded = await encoder._compose_kv_pair(key, value)
-    result_key, result_val, offset = await decoder._parse_kv_pair(encoded, 0)
+    result_key, result_val, offset = decoder._parse_kv_pair(encoded, 0)
 
     assert result_key == key
     assert result_val == value
@@ -38,7 +38,7 @@ async def test_roundtrip_kv_pair_complex_types():
 
     for key, value in test_cases:
         encoded = await encoder._compose_kv_pair(key, value)
-        result_key, result_val, offset = await decoder._parse_kv_pair(encoded, 0)
+        result_key, result_val, offset = decoder._parse_kv_pair(encoded, 0)
 
         assert result_key == key
         assert result_val == value
@@ -50,7 +50,7 @@ async def test_roundtrip_metadata(metadata_data):
     metadata_obj, desc = metadata_data
 
     encoded = await encoder.encode_metadata(metadata_obj)
-    result, offset = await decoder.decode_metadata(encoded, 0)
+    result, offset = decoder.decode_metadata(encoded, 0)
 
     assert result.flags.FIN == metadata_obj.flags.FIN
     assert result.flags.ABORT == metadata_obj.flags.ABORT
@@ -72,7 +72,7 @@ async def test_roundtrip_metadata_edge_cases():
 
     for metadata in test_cases:
         encoded = await encoder.encode_metadata(metadata)
-        result, offset = await decoder.decode_metadata(encoded, 0)
+        result, offset = decoder.decode_metadata(encoded, 0)
 
         assert result.flags.FIN == metadata.flags.FIN
         assert result.flags.ABORT == metadata.flags.ABORT
@@ -85,7 +85,7 @@ async def test_roundtrip_kv_list(kv_list_data):
     kv_dict, desc = kv_list_data
 
     encoded = await encoder.encode_kv_list(kv_dict)
-    result, offset = await decoder.decode_kv_list(encoded, 0, len(encoded))
+    result, offset = decoder.decode_kv_list(encoded, 0, len(encoded))
 
     assert result == kv_dict
     assert offset == len(encoded)
@@ -96,7 +96,7 @@ async def test_roundtrip_kv_list_empty():
     kv_dict = {}
 
     encoded = await encoder.encode_kv_list(kv_dict)
-    result, offset = await decoder.decode_kv_list(encoded, 0, len(encoded))
+    result, offset = decoder.decode_kv_list(encoded, 0, len(encoded))
 
     assert result == {}
     assert offset == 0
@@ -113,7 +113,7 @@ async def test_roundtrip_kv_list_mixed_types():
     }
 
     encoded = await encoder.encode_kv_list(kv_dict)
-    result, offset = await decoder.decode_kv_list(encoded, 0, len(encoded))
+    result, offset = decoder.decode_kv_list(encoded, 0, len(encoded))
 
     assert result == kv_dict
     assert offset == len(encoded)
@@ -127,9 +127,7 @@ async def test_roundtrip_kv_list_with_offset():
     encoded_kv = await encoder.encode_kv_list(kv_dict)
     full_buffer = prefix + encoded_kv
 
-    result, offset = await decoder.decode_kv_list(
-        full_buffer, len(prefix), len(full_buffer)
-    )
+    result, offset = decoder.decode_kv_list(full_buffer, len(prefix), len(full_buffer))
 
     assert result == kv_dict
     assert offset == len(full_buffer)
@@ -140,7 +138,7 @@ async def test_roundtrip_message_list(message_list_data):
     messages_dict, desc = message_list_data
 
     encoded = await encoder.encode_message_list(messages_dict)
-    result, offset = await decoder.decode_list_of_messages(encoded, 0, len(encoded))
+    result, offset = decoder.decode_list_of_messages(encoded, 0, len(encoded))
 
     assert result == messages_dict
     assert offset == len(encoded)
@@ -151,7 +149,7 @@ async def test_roundtrip_message_list_empty():
     messages = {}
 
     encoded = await encoder.encode_message_list(messages)
-    result, offset = await decoder.decode_list_of_messages(encoded, 0, len(encoded))
+    result, offset = decoder.decode_list_of_messages(encoded, 0, len(encoded))
 
     assert result == messages
     assert offset == 0
@@ -176,7 +174,7 @@ async def test_roundtrip_message_list_complex():
     }
 
     encoded = await encoder.encode_message_list(messages)
-    result, offset = await decoder.decode_list_of_messages(encoded, 0, len(encoded))
+    result, offset = decoder.decode_list_of_messages(encoded, 0, len(encoded))
 
     assert result == messages
     assert offset == len(encoded)
@@ -190,7 +188,7 @@ async def test_roundtrip_message_list_with_offset():
     encoded_messages = await encoder.encode_message_list(messages)
     full_buffer = prefix + encoded_messages
 
-    result, offset = await decoder.decode_list_of_messages(
+    result, offset = decoder.decode_list_of_messages(
         full_buffer, len(prefix), len(full_buffer)
     )
 
@@ -203,7 +201,7 @@ async def test_roundtrip_action(action_data):
     action_obj, desc = action_data
 
     encoded = await encoder._compose_action(action_obj)
-    result, offset = await decoder.decode_list_of_actions(encoded, 0, len(encoded))
+    result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
     assert len(result) == 1
     assert isinstance(result[0], type(action_obj))
@@ -228,7 +226,7 @@ async def test_roundtrip_action_set_var_all_scopes():
         action = SetVarAction(scope=scope, name="test", value=42)
 
         encoded = await encoder._compose_action(action)
-        result, offset = await decoder.decode_list_of_actions(encoded, 0, len(encoded))
+        result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
         assert len(result) == 1
         assert isinstance(result[0], SetVarAction)
@@ -254,7 +252,7 @@ async def test_roundtrip_action_set_var_all_types():
         action = SetVarAction(scope=ActionScope.SESSION, name=name, value=value)
 
         encoded = await encoder._compose_action(action)
-        result, offset = await decoder.decode_list_of_actions(encoded, 0, len(encoded))
+        result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
         assert len(result) == 1
         assert result[0].name == name
@@ -275,7 +273,7 @@ async def test_roundtrip_action_unset_var_all_scopes():
         action = UnsetVarAction(scope=scope, name="test")
 
         encoded = await encoder._compose_action(action)
-        result, offset = await decoder.decode_list_of_actions(encoded, 0, len(encoded))
+        result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
         assert len(result) == 1
         assert isinstance(result[0], UnsetVarAction)
@@ -289,7 +287,7 @@ async def test_roundtrip_action_list(action_list_data):
     actions, desc = action_list_data
 
     encoded = await encoder.encode_action_list(actions)
-    result, offset = await decoder.decode_list_of_actions(encoded, 0, len(encoded))
+    result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
     assert len(result) == len(actions)
     for i, action in enumerate(actions):
@@ -306,7 +304,7 @@ async def test_roundtrip_action_list_empty():
     actions = []
 
     encoded = await encoder.encode_action_list(actions)
-    result, offset = await decoder.decode_list_of_actions(encoded, 0, 0)
+    result, offset = decoder.decode_list_of_actions(encoded, 0, 0)
 
     assert result == []
     assert offset == 0
@@ -323,7 +321,7 @@ async def test_roundtrip_action_list_multiple():
     ]
 
     encoded = await encoder.encode_action_list(actions)
-    result, offset = await decoder.decode_list_of_actions(encoded, 0, len(encoded))
+    result, offset = decoder.decode_list_of_actions(encoded, 0, len(encoded))
 
     assert len(result) == len(actions)
     for i, action in enumerate(actions):
@@ -354,8 +352,8 @@ async def test_roundtrip_full_notify_payload():
     encoded_messages = await encoder.encode_message_list(messages)
     full_payload = encoded_metadata + encoded_messages
 
-    decoded_metadata, offset = await decoder.decode_metadata(full_payload, 0)
-    decoded_messages, final_offset = await decoder.decode_list_of_messages(
+    decoded_metadata, offset = decoder.decode_metadata(full_payload, 0)
+    decoded_messages, final_offset = decoder.decode_list_of_messages(
         full_payload, offset, len(full_payload)
     )
 
@@ -385,8 +383,8 @@ async def test_roundtrip_full_ack_payload():
     encoded_actions = await encoder.encode_action_list(actions)
     full_payload = encoded_metadata + encoded_actions
 
-    decoded_metadata, offset = await decoder.decode_metadata(full_payload, 0)
-    decoded_actions, final_offset = await decoder.decode_list_of_actions(
+    decoded_metadata, offset = decoder.decode_metadata(full_payload, 0)
+    decoded_actions, final_offset = decoder.decode_list_of_actions(
         full_payload, offset, len(full_payload)
     )
 
