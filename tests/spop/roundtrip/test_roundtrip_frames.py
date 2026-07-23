@@ -27,7 +27,7 @@ async def test_roundtrip_haproxy_hello(haproxy_hello_data):
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, HaproxyHello)
     assert decoded.frame_type == frame_type
@@ -56,7 +56,7 @@ async def test_roundtrip_agent_hello(agent_hello_data):
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, AgentHello)
     assert decoded.frame_type == frame_type
@@ -82,7 +82,7 @@ async def test_roundtrip_disconnect(disconnect_data):
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Disconnect)
     assert decoded.frame_type == frame_type
@@ -107,7 +107,7 @@ async def test_roundtrip_notify(notify_data):
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Notify)
     assert decoded.frame_type == frame_type
@@ -132,7 +132,7 @@ async def test_roundtrip_ack(ack_data):
     encoded = frame.encode(max_frame_size=16384)
 
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Ack)
     assert decoded.frame_type == frame_type
@@ -164,7 +164,7 @@ async def test_roundtrip_any_frame(any_frame_data):
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert decoded.frame_type == frame_type
     assert decoded.metadata.stream_id == metadata.stream_id
@@ -186,7 +186,7 @@ async def test_roundtrip_haproxy_hello_multiple_versions():
 
     encoded = frame.encode(max_frame_size=32768)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, HaproxyHello)
     assert decoded.supported_versions == ["2.0", "1.0", "1.5"]
@@ -211,7 +211,7 @@ async def test_roundtrip_notify_with_complex_types():
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Notify)
     assert decoded.messages["check"]["ip"] == IPv4Address("192.168.1.1")
@@ -237,7 +237,7 @@ async def test_roundtrip_ack_mixed_actions():
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Ack)
     assert len(decoded.actions) == 5
@@ -266,7 +266,7 @@ async def test_roundtrip_notify_empty_messages():
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Notify)
     assert decoded.messages == {}
@@ -283,7 +283,7 @@ async def test_roundtrip_ack_empty_actions():
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Ack)
     assert decoded.actions == []
@@ -300,7 +300,7 @@ async def test_roundtrip_notify_message_with_no_args():
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Notify)
     assert "ping" in decoded.messages
@@ -320,7 +320,7 @@ async def test_roundtrip_haproxy_hello_no_capabilities():
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, HaproxyHello)
     assert decoded.capabilities == []
@@ -339,7 +339,7 @@ async def test_roundtrip_agent_hello_no_capabilities():
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, AgentHello)
     assert decoded.capabilities == []
@@ -357,7 +357,7 @@ async def test_roundtrip_disconnect_empty_message():
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Disconnect)
     assert decoded.message == ""
@@ -373,7 +373,7 @@ async def test_roundtrip_metadata_flags():
     )
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     # Flags are always hardcoded - see spoe_forge.spop.frame.Frame.construct for reference
     assert decoded.metadata.flags.FIN is True
@@ -391,7 +391,7 @@ async def test_roundtrip_large_stream_and_frame_ids():
 
     encoded = frame.encode(max_frame_size=16384)
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader)
+    decoded = await Frame.decode(reader, 32768)
 
     assert decoded.metadata.stream_id == 999999
     assert decoded.metadata.frame_id == 888888

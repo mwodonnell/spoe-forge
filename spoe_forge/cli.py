@@ -47,7 +47,9 @@ async def healthcheck(host: str, port: int, quiet: bool) -> bool:
         writer.write(haproxy_hello.encode(DEFAULT_FRAME_SIZE))
         await writer.drain()
 
-        agent_hello = await asyncio.wait_for(Frame.decode(reader), timeout=5.0)
+        agent_hello = await asyncio.wait_for(
+            Frame.decode(reader, DEFAULT_FRAME_SIZE), timeout=5.0
+        )
 
         writer.close()
         await writer.wait_closed()

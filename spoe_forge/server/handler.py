@@ -8,7 +8,9 @@ from spoe_forge.exception import SpoeForgeError
 from spoe_forge.server.configuration import ServerConfiguration
 from spoe_forge.server.constants import DisconnectCode
 from spoe_forge.spop.constants import FrameType
+from spoe_forge.spop.exception import SpopEncodeError
 from spoe_forge.spop.exception import SpopEOFError
+from spoe_forge.spop.exception import SpopFrameTooBigError
 from spoe_forge.spop.frame import Disconnect
 from spoe_forge.spop.frame import Frame
 from spoe_forge.spop.frame import HaproxyHello
@@ -68,7 +70,7 @@ class ForgeHandler:
 
         try:
             self.writer.write(frame.encode(self.config.max_frame_size))
-        except SpoeForgeError as e:
+        except SpopEncodeError as e:
             logger.warning(
                 f"Failed to write frame to stream - {frame.frame_type.name} - {e}"
             )
@@ -119,7 +121,7 @@ class ForgeHandler:
 
         :return: True if handshake succeeded and processing should continue, False otherwise
         """
-        frame = await Frame.decode(self.reader)
+        frame = await Frame.decode(self.reader, self.config.max_frame_size)
         if not isinstance(frame, HaproxyHello):
             await self.send_disconnect_on_error(
                 status_code=DisconnectCode.INVALID_FRAME_RECEIVED,
@@ -172,7 +174,7 @@ class ForgeHandler:
         :return: True if cycle completed successfully, False if connection should close
         """
         try:
-            frame = await Frame.decode(self.reader)
+            frame = await Frame.decode(self.reader, self.config.max_frame_size)
         except SpopEOFError:
             logger.debug("Stream disconnected with EOF")
             return False
@@ -227,6 +229,13 @@ class ForgeHandler:
                 if not await self.handle_notify_cycle():
                     await self.close_connection()
                     break
+
+        except SpopFrameTooBigError as e:
+            await self.send_disconnect_on_error(
+                status_code=DisconnectCode.FRAME_TOO_BIG,
+                message=str(e),
+            )
+            await self.close_connection()
 
         except SpoeForgeError as e:
             if not await self.send_disconnect_on_error(

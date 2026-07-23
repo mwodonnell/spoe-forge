@@ -1,3 +1,4 @@
+import struct
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
@@ -10,9 +11,11 @@ from spoe_forge.server.handler import ForgeHandler
 from spoe_forge.spop.constants import ActionScope
 from spoe_forge.spop.constants import FrameType
 from spoe_forge.spop.exception import SpopEOFError
+from spoe_forge.spop.exception import SpopFrameTooBigError
+from spoe_forge.spop.frame import Disconnect
 from spoe_forge.spop.frame import Frame
 from spoe_forge.spop.spop_types import SetVarAction
-from tests.utils import create_mock_streams, create_handler
+from tests.utils import create_mock_streams, create_handler, create_stream_reader
 
 
 def test_handler_initialization():
@@ -88,7 +91,7 @@ async def test_send_frame_fails_when_stream_closed():
 
 
 @pytest.mark.asyncio
-async def test_send_frame_handles_encode_error():
+async def test_send_frame_raises_when_frame_too_big():
     handler, reader, writer = create_handler()
 
     large_messages = {f"msg{i}": {"arg": i} for i in range(1000)}
@@ -101,11 +104,26 @@ async def test_send_frame_handles_encode_error():
 
     handler.config._max_frame_size = 100
 
-    with patch("spoe_forge.server.handler.logger") as mock_logger:
-        result = await handler.send_frame(test_frame)
+    with pytest.raises(SpopFrameTooBigError):
+        await handler.send_frame(test_frame)
 
-        assert result is False
-        mock_logger.warning.assert_called_once()
+    writer.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_core_handler_disconnects_on_oversized_inbound_frame():
+    handler, reader, writer = create_handler()
+    handler.reader = create_stream_reader(struct.pack("!I", 100_000))
+
+    with patch("spoe_forge.server.handler.logger"):
+        await handler.core_handler()
+
+    written = writer.write.call_args[0][0]
+    disconnect = await Frame.decode(create_stream_reader(written), 4096)
+
+    assert isinstance(disconnect, Disconnect)
+    assert disconnect.status_code == DisconnectCode.FRAME_TOO_BIG
+    writer.close.assert_called_once()
 
 
 @pytest.mark.asyncio
