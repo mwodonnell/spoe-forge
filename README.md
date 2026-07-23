@@ -5,7 +5,7 @@ that communicate with HAProxy using the SPOA protocol.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![Coverage Status](https://coveralls.io/repos/github/mwodonnell/spoe-forge/badge.svg?branch=unit-tests)](https://coveralls.io/github/mwodonnell/spoe-forge?branch=unit-tests)
+[![Coverage Status](https://coveralls.io/repos/github/mwodonnell/spoe-forge/badge.svg?branch=main)](https://coveralls.io/github/mwodonnell/spoe-forge?branch=main)
 
 ## Overview
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
 SPOE Forge works with HAProxy's SPOE configuration. For details on configuring HAProxy to
 communicate with your agent, see the
-[official HAProxy SPOE documentation](https://www.haproxy.org/download/3.3/doc/SPOE.txt).
+[official HAProxy SPOE documentation](https://www.haproxy.org/download/3.2/doc/SPOE.txt).
 
 ## Local Development
 
