@@ -53,7 +53,7 @@ async def test_close_connection_skips_if_already_closing():
 async def test_send_frame_success():
     handler, reader, writer = create_handler()
 
-    test_frame = await Frame.construct(
+    test_frame = Frame.construct(
         FrameType.ACK,
         stream_id=1,
         frame_id=1,
@@ -72,7 +72,7 @@ async def test_send_frame_fails_when_stream_closed():
     handler, reader, writer = create_handler()
     writer.is_closing.return_value = True
 
-    test_frame = await Frame.construct(
+    test_frame = Frame.construct(
         FrameType.ACK,
         stream_id=1,
         frame_id=1,
@@ -92,7 +92,7 @@ async def test_send_frame_handles_encode_error():
     handler, reader, writer = create_handler()
 
     large_messages = {f"msg{i}": {"arg": i} for i in range(1000)}
-    test_frame = await Frame.construct(
+    test_frame = Frame.construct(
         FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
@@ -158,7 +158,7 @@ async def test_send_disconnect_on_error_sends_disconnect():
 async def test_handle_handshake_success():
     handler, reader, writer = create_handler()
 
-    haproxy_hello = await Frame.construct(
+    haproxy_hello = Frame.construct(
         FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,
@@ -180,7 +180,7 @@ async def test_handle_handshake_success():
 async def test_handle_handshake_rejects_wrong_frame_type():
     handler, reader, writer = create_handler()
 
-    notify = await Frame.construct(
+    notify = Frame.construct(
         FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
@@ -202,7 +202,7 @@ async def test_handle_handshake_rejects_wrong_frame_type():
 async def test_handle_handshake_fails_on_incompatibility():
     handler, reader, writer = create_handler()
 
-    haproxy_hello = await Frame.construct(
+    haproxy_hello = Frame.construct(
         FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,
@@ -218,8 +218,8 @@ async def test_handle_handshake_fails_on_incompatibility():
     ):
         original_negotiate = handler.config.negotiate_server_compatibility
 
-        async def mock_negotiate(*args, **kwargs):
-            await original_negotiate(*args, **kwargs)
+        def mock_negotiate(*args, **kwargs):
+            original_negotiate(*args, **kwargs)
             handler.config._server_compatible = False
 
         with patch.object(
@@ -238,7 +238,7 @@ async def test_handle_handshake_fails_on_incompatibility():
 async def test_handle_handshake_closes_on_healthcheck():
     handler, reader, writer = create_handler()
 
-    haproxy_hello = await Frame.construct(
+    haproxy_hello = Frame.construct(
         FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,
@@ -269,7 +269,7 @@ async def test_handle_notify_cycle_success():
     )
     handler, reader, writer = create_handler(notify_handler)
 
-    notify = await Frame.construct(
+    notify = Frame.construct(
         FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
@@ -300,7 +300,7 @@ async def test_handle_notify_cycle_handles_eof():
 async def test_handle_notify_cycle_handles_disconnect():
     handler, reader, writer = create_handler()
 
-    disconnect = await Frame.construct(
+    disconnect = Frame.construct(
         FrameType.HAPROXY_DISCONNECT,
         stream_id=0,
         frame_id=0,
@@ -323,7 +323,7 @@ async def test_handle_notify_cycle_handles_disconnect():
 async def test_handle_notify_cycle_rejects_wrong_frame_type():
     handler, reader, writer = create_handler()
 
-    agent_hello = await Frame.construct(
+    agent_hello = Frame.construct(
         FrameType.AGENT_HELLO,
         stream_id=0,
         frame_id=0,
@@ -353,7 +353,7 @@ async def test_handle_notify_cycle_passes_messages_to_handler():
     handler, reader, writer = create_handler(capture_handler)
 
     test_messages = {"check-ip": {"src": "192.168.1.1", "dst": "10.0.0.1"}}
-    notify = await Frame.construct(
+    notify = Frame.construct(
         FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
@@ -371,7 +371,7 @@ async def test_core_handler_full_flow():
     notify_handler = AsyncMock(return_value=[])
     handler, reader, writer = create_handler(notify_handler)
 
-    haproxy_hello = await Frame.construct(
+    haproxy_hello = Frame.construct(
         FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,
@@ -381,13 +381,13 @@ async def test_core_handler_full_flow():
         healthcheck=False,
     )
 
-    notify1 = await Frame.construct(
+    notify1 = Frame.construct(
         FrameType.NOTIFY, stream_id=1, frame_id=1, messages={"msg1": {}}
     )
-    notify2 = await Frame.construct(
+    notify2 = Frame.construct(
         FrameType.NOTIFY, stream_id=1, frame_id=2, messages={"msg2": {}}
     )
-    disconnect = await Frame.construct(
+    disconnect = Frame.construct(
         FrameType.HAPROXY_DISCONNECT,
         stream_id=0,
         frame_id=0,
@@ -412,7 +412,7 @@ async def test_core_handler_handles_spoeforge_error():
     notify_handler = AsyncMock(side_effect=SpoeForgeError("Test error"))
     handler, reader, writer = create_handler(notify_handler)
 
-    haproxy_hello = await Frame.construct(
+    haproxy_hello = Frame.construct(
         FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,
@@ -422,9 +422,7 @@ async def test_core_handler_handles_spoeforge_error():
         healthcheck=False,
     )
 
-    notify = await Frame.construct(
-        FrameType.NOTIFY, stream_id=1, frame_id=1, messages={}
-    )
+    notify = Frame.construct(FrameType.NOTIFY, stream_id=1, frame_id=1, messages={})
 
     with (
         patch.object(Frame, "decode", side_effect=[haproxy_hello, notify]),
@@ -440,7 +438,7 @@ async def test_core_handler_handles_spoeforge_error():
 async def test_core_handler_handles_connection_reset():
     handler, reader, writer = create_handler()
 
-    haproxy_hello = await Frame.construct(
+    haproxy_hello = Frame.construct(
         FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,

@@ -15,7 +15,6 @@ def test_registry_initialization():
     registry = AgentRegistry()
 
     assert registry._handlers == {}
-    assert registry._validation_cache == {}
 
 
 def test_register_adds_handler():

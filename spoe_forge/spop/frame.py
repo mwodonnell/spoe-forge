@@ -202,7 +202,7 @@ class Frame(ABC):
         return frame
 
     @classmethod
-    async def construct(
+    def construct(
         cls, frame_type: FrameType, stream_id: int, frame_id: int, **payload_kwargs
     ) -> "Frame":
         """
@@ -232,7 +232,7 @@ class Frame(ABC):
         )
 
         try:
-            frame = await frame_class(frame_type, metadata).construct_payload(
+            frame = frame_class(frame_type, metadata).construct_payload(
                 **payload_kwargs
             )
         except KeyError as e:
@@ -269,7 +269,7 @@ class Frame(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def construct_payload(self, **payload_kwargs) -> "Frame":
+    def construct_payload(self, **payload_kwargs) -> "Frame":
         """
         Construct frame payload from keyword arguments.
 
@@ -349,7 +349,7 @@ class HaproxyHello(Frame):
 
         return self, offset
 
-    async def construct_payload(self, **payload_kwargs) -> "HaproxyHello":
+    def construct_payload(self, **payload_kwargs) -> "HaproxyHello":
         self.supported_versions = payload_kwargs["supported_versions"]
         self.max_frame_size = payload_kwargs["max_frame_size"]
         self.capabilities = payload_kwargs["capabilities"]
@@ -396,7 +396,7 @@ class AgentHello(Frame):
 
         return self, offset
 
-    async def construct_payload(self, **payload_kwargs) -> "AgentHello":
+    def construct_payload(self, **payload_kwargs) -> "AgentHello":
         self.version = payload_kwargs["version"]
         self.max_frame_size = payload_kwargs["max_frame_size"]
         self.capabilities = payload_kwargs["capabilities"]
@@ -438,7 +438,7 @@ class Disconnect(Frame):
 
         return self, offset
 
-    async def construct_payload(self, **payload_kwargs) -> "Disconnect":
+    def construct_payload(self, **payload_kwargs) -> "Disconnect":
         self.status_code = payload_kwargs["status_code"]
         self.message = payload_kwargs["message"]
 
@@ -467,7 +467,7 @@ class Notify(Frame):
 
         return self, offset
 
-    async def construct_payload(self, **payload_kwargs) -> "Notify":
+    def construct_payload(self, **payload_kwargs) -> "Notify":
         self.messages = payload_kwargs["messages"]
 
         return self
@@ -497,6 +497,6 @@ class Ack(Frame):
 
         return self, offset
 
-    async def construct_payload(self, **payload_kwargs) -> "Ack":
+    def construct_payload(self, **payload_kwargs) -> "Ack":
         self.actions = payload_kwargs["actions"]
         return self

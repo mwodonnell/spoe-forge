@@ -33,7 +33,7 @@ def test_frame_registry_maps_to_correct_classes():
 
 @pytest.mark.asyncio
 async def test_construct_haproxy_hello():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.HAPROXY_HELLO,
         stream_id=1,
         frame_id=1,
@@ -54,7 +54,7 @@ async def test_construct_haproxy_hello():
 
 @pytest.mark.asyncio
 async def test_construct_haproxy_hello_with_optional_fields():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,
@@ -72,7 +72,7 @@ async def test_construct_haproxy_hello_with_optional_fields():
 
 @pytest.mark.asyncio
 async def test_construct_agent_hello():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.AGENT_HELLO,
         stream_id=1,
         frame_id=1,
@@ -90,7 +90,7 @@ async def test_construct_agent_hello():
 
 @pytest.mark.asyncio
 async def test_construct_disconnect_haproxy():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.HAPROXY_DISCONNECT,
         stream_id=1,
         frame_id=1,
@@ -106,7 +106,7 @@ async def test_construct_disconnect_haproxy():
 
 @pytest.mark.asyncio
 async def test_construct_disconnect_agent():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.AGENT_DISCONNECT,
         stream_id=0,
         frame_id=0,
@@ -122,7 +122,7 @@ async def test_construct_disconnect_agent():
 
 @pytest.mark.asyncio
 async def test_construct_notify():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
@@ -137,7 +137,7 @@ async def test_construct_notify():
 
 @pytest.mark.asyncio
 async def test_construct_notify_empty():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.NOTIFY,
         stream_id=0,
         frame_id=0,
@@ -150,7 +150,7 @@ async def test_construct_notify_empty():
 
 @pytest.mark.asyncio
 async def test_construct_ack():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.ACK,
         stream_id=1,
         frame_id=1,
@@ -166,7 +166,7 @@ async def test_construct_ack():
 
 @pytest.mark.asyncio
 async def test_construct_ack_empty():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.ACK,
         stream_id=0,
         frame_id=0,
@@ -181,7 +181,7 @@ async def test_construct_ack_empty():
 async def test_encode_raises_on_size_limit():
     large_messages = {f"msg{i}": {"arg": i} for i in range(1000)}
 
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
@@ -194,7 +194,7 @@ async def test_encode_raises_on_size_limit():
 
 @pytest.mark.asyncio
 async def test_encode_includes_correct_frame_length():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.ACK,
         stream_id=0,
         frame_id=0,
@@ -208,7 +208,7 @@ async def test_encode_includes_correct_frame_length():
 
 @pytest.mark.asyncio
 async def test_encode_includes_frame_type():
-    frame = await Frame.construct(
+    frame = Frame.construct(
         frame_type=FrameType.ACK,
         stream_id=1,
         frame_id=1,
@@ -254,7 +254,7 @@ async def test_construct_raises_on_unknown_frame_type():
     invalid_frame_type = 99  # Not a valid FrameType value
 
     with pytest.raises(SpopDecodeError, match="Unknown frame type"):
-        await Frame.construct(
+        Frame.construct(
             frame_type=invalid_frame_type,
             stream_id=0,
             frame_id=0,

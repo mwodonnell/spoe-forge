@@ -33,7 +33,7 @@ async def healthcheck(host: str, port: int, quiet: bool) -> bool:
         )
 
         # Construct HAPROXY_HELLO frame with healthcheck flag
-        haproxy_hello = await Frame.construct(
+        haproxy_hello = Frame.construct(
             frame_type=FrameType.HAPROXY_HELLO,
             stream_id=0,
             frame_id=0,

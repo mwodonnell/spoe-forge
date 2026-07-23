@@ -14,8 +14,8 @@ pattern (h11/h2): parsing and serialization work on buffers, transport stays wit
 |---|--------|--------|
 | 1 | fix: correct self-comparison in SPOP version compatibility check | merged (PR #13) |
 | 2 | refactor: make SPOP decode path synchronous | merged (PR #14) |
-| 3 | refactor: make SPOP encode path synchronous | in review |
-| 4 | refactor: make frame construction and negotiation synchronous | todo |
+| 3 | refactor: make SPOP encode path synchronous | merged (PR #15) |
+| 4 | refactor: make frame construction and negotiation synchronous | in review |
 | 5 | chore: fix CLAUDE.md drift and small cleanups | todo |
 
 ### 1. fix: correct self-comparison in SPOP version compatibility check

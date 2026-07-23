@@ -85,7 +85,7 @@ class ForgeHandler:
         :param str message: Human-readable disconnect message
         :return: True if disconnect frame was sent successfully, False otherwise
         """
-        err_frame = await Frame.construct(
+        err_frame = Frame.construct(
             FrameType.AGENT_DISCONNECT,
             stream_id=0,
             frame_id=0,
@@ -127,7 +127,7 @@ class ForgeHandler:
             )
             return False
 
-        await self.config.negotiate_server_compatibility(
+        self.config.negotiate_server_compatibility(
             frame.supported_versions, frame.max_frame_size, frame.capabilities
         )
 
@@ -138,7 +138,7 @@ class ForgeHandler:
             )
             return False
 
-        agent_hello = await Frame.construct(
+        agent_hello = Frame.construct(
             FrameType.AGENT_HELLO,
             stream_id=0,
             frame_id=0,
@@ -202,7 +202,7 @@ class ForgeHandler:
 
         actions = await self.notify_handler(frame.messages)
 
-        ack = await Frame.construct(
+        ack = Frame.construct(
             FrameType.ACK,
             stream_id=frame.metadata.stream_id,
             frame_id=frame.metadata.frame_id,
