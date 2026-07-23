@@ -1,5 +1,7 @@
 import asyncio
+import inspect
 import logging
+from collections.abc import Awaitable
 from typing import Callable
 
 from spoe_forge.agent.context import AgentContext
@@ -8,7 +10,7 @@ from spoe_forge.spop.spop_types import SpoaDataType, Action
 
 logger = logging.getLogger(__name__)
 
-MessageHandlerFunc = Callable[[AgentContext], list[Action]]
+MessageHandlerFunc = Callable[[AgentContext], list[Action] | Awaitable[list[Action]]]
 
 
 class AgentRegistry:
@@ -41,7 +43,8 @@ class AgentRegistry:
         """
         Route a message to its registered handler.
 
-        Wraps synchronous handlers with asyncio.to_thread for async compatibility.
+        Async handlers are awaited on the event loop; synchronous handlers are
+        wrapped with asyncio.to_thread so they can't block it.
 
         :param str message: Message name to handle
         :param dict[str, SpoaDataType] args: Message arguments
@@ -56,6 +59,9 @@ class AgentRegistry:
 
         ctx = AgentContext(message, args)
         try:
+            if inspect.iscoroutinefunction(handler):
+                return await handler(ctx)
+
             return await asyncio.to_thread(handler, ctx)
         except Exception as e:
             logger.error(
