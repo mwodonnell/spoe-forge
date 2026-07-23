@@ -111,16 +111,19 @@ def encode_int(val: int) -> bytes:
 
 def encode_string(val: str) -> bytes:
     """
-    Encode string as ASCII with varint length prefix.
+    Encode string as latin-1 with varint length prefix.
+
+    latin-1 mirrors the decode side (lossless byte<->str); only codepoints
+    above 255 are unrepresentable on the wire.
 
     :param str val: String to encode
     :return: Encoded bytes
     """
     try:
-        return _compose_binary(val.encode("ascii"))
+        return _compose_binary(val.encode("latin-1"))
     except UnicodeEncodeError:
         raise SpopEncodeError(
-            f"cannot encode non-ASCII string to SPOP: {val!r}",
+            f"cannot encode string with codepoints above 255 to SPOP: {val!r}",
         )
 
 
@@ -250,16 +253,16 @@ def encode_dt_string(val: str) -> bytes:
     """
     Encode string with type prefix for SPOA protocol.
 
-    Strings must be ASCII-encodable.
+    Strings must be latin-1-encodable (codepoints <= 255).
 
     :param str val: String to encode
     :return: Encoded bytes
     """
     try:
-        return _type_data(DataType.STRING) + _compose_binary(val.encode("ascii"))
+        return _type_data(DataType.STRING) + _compose_binary(val.encode("latin-1"))
     except UnicodeEncodeError:
         raise SpopEncodeError(
-            f"cannot encode non-ASCII string to SPOP: {val!r}",
+            f"cannot encode string with codepoints above 255 to SPOP: {val!r}",
         )
 
 

@@ -138,6 +138,17 @@ async def test_roundtrip_string(string_case):
 
 
 @pytest.mark.asyncio
+async def test_roundtrip_string_latin1_high_bytes():
+    decoded_value = "h\xe9llo-\xff"
+
+    encoded = encoder.encode_string(decoded_value)
+    result, offset = decoder.decode_string(encoded, 0)
+
+    assert result == decoded_value
+    assert offset == len(encoded)
+
+
+@pytest.mark.asyncio
 async def test_roundtrip_typed_null():
     encoded = encoder.encode_dt_null()
     result, offset = decoder.auto_decode_var(encoded, 0)
