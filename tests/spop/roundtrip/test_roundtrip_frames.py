@@ -199,14 +199,17 @@ async def test_roundtrip_notify_with_complex_types():
         frame_type=FrameType.NOTIFY,
         stream_id=5,
         frame_id=10,
-        messages={
-            "check": {
-                "ip": IPv4Address("192.168.1.1"),
-                "port": 8080,
-                "ssl": True,
-                "data": b"\x00\x01\x02",
-            }
-        },
+        messages=[
+            (
+                "check",
+                {
+                    "ip": IPv4Address("192.168.1.1"),
+                    "port": 8080,
+                    "ssl": True,
+                    "data": b"\x00\x01\x02",
+                },
+            )
+        ],
     )
 
     encoded = frame.encode(max_frame_size=16384)
@@ -214,10 +217,12 @@ async def test_roundtrip_notify_with_complex_types():
     decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Notify)
-    assert decoded.messages["check"]["ip"] == IPv4Address("192.168.1.1")
-    assert decoded.messages["check"]["port"] == 8080
-    assert decoded.messages["check"]["ssl"] is True
-    assert decoded.messages["check"]["data"] == b"\x00\x01\x02"
+    name, args = decoded.messages[0]
+    assert name == "check"
+    assert args["ip"] == IPv4Address("192.168.1.1")
+    assert args["port"] == 8080
+    assert args["ssl"] is True
+    assert args["data"] == b"\x00\x01\x02"
 
 
 @pytest.mark.asyncio
@@ -261,7 +266,7 @@ async def test_roundtrip_notify_empty_messages():
         frame_type=FrameType.NOTIFY,
         stream_id=0,
         frame_id=0,
-        messages={},
+        messages=[],
     )
 
     encoded = frame.encode(max_frame_size=16384)
@@ -269,7 +274,7 @@ async def test_roundtrip_notify_empty_messages():
     decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Notify)
-    assert decoded.messages == {}
+    assert decoded.messages == []
 
 
 @pytest.mark.asyncio
@@ -295,7 +300,7 @@ async def test_roundtrip_notify_message_with_no_args():
         frame_type=FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
-        messages={"ping": {}},
+        messages=[("ping", {})],
     )
 
     encoded = frame.encode(max_frame_size=16384)
@@ -303,8 +308,7 @@ async def test_roundtrip_notify_message_with_no_args():
     decoded = await Frame.decode(reader, 32768)
 
     assert isinstance(decoded, Notify)
-    assert "ping" in decoded.messages
-    assert decoded.messages["ping"] == {}
+    assert decoded.messages == [("ping", {})]
 
 
 @pytest.mark.asyncio

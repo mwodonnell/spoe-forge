@@ -461,8 +461,8 @@ class Notify(Frame):
     Contains one or more messages with arguments. Agent must respond with ACK.
 
     Attributes:
-        messages: Dict mapping message names to their arguments
-                  {message_name: {arg_name: arg_value}}
+        messages: Ordered (message_name, args) pairs; the same message name may
+                  appear more than once in a frame
     """
 
     messages: Messages

@@ -129,13 +129,12 @@ async def test_construct_notify():
         frame_type=FrameType.NOTIFY,
         stream_id=1,
         frame_id=1,
-        messages={"check-ip": {"src": "192.168.1.1", "dst": "10.0.0.1"}},
+        messages=[("check-ip", {"src": "192.168.1.1", "dst": "10.0.0.1"})],
     )
 
     assert isinstance(frame, Notify)
     assert frame.frame_type == FrameType.NOTIFY
-    assert "check-ip" in frame.messages
-    assert frame.messages["check-ip"]["src"] == "192.168.1.1"
+    assert frame.messages == [("check-ip", {"src": "192.168.1.1", "dst": "10.0.0.1"})]
 
 
 @pytest.mark.asyncio
@@ -144,11 +143,11 @@ async def test_construct_notify_empty():
         frame_type=FrameType.NOTIFY,
         stream_id=0,
         frame_id=0,
-        messages={},
+        messages=[],
     )
 
     assert isinstance(frame, Notify)
-    assert frame.messages == {}
+    assert frame.messages == []
 
 
 @pytest.mark.asyncio
@@ -182,7 +181,7 @@ async def test_construct_ack_empty():
 
 @pytest.mark.asyncio
 async def test_encode_raises_on_size_limit():
-    large_messages = {f"msg{i}": {"arg": i} for i in range(1000)}
+    large_messages = [(f"msg{i}", {"arg": i}) for i in range(1000)]
 
     frame = Frame.construct(
         frame_type=FrameType.NOTIFY,

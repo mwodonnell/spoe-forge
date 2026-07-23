@@ -146,7 +146,7 @@ async def test_roundtrip_message_list(message_list_data):
 
 @pytest.mark.asyncio
 async def test_roundtrip_message_list_empty():
-    messages = {}
+    messages = []
 
     encoded = encoder.encode_message_list(messages)
     result, offset = decoder.decode_list_of_messages(encoded, 0, len(encoded))
@@ -157,21 +157,17 @@ async def test_roundtrip_message_list_empty():
 
 @pytest.mark.asyncio
 async def test_roundtrip_message_list_complex():
-    messages = {
-        "check-ip": {
-            "src": ipaddress.IPv4Address("192.168.1.1"),
-            "dst": ipaddress.IPv4Address("10.0.0.1"),
-        },
-        "check-user": {
-            "username": "admin",
-            "active": True,
-            "score": 95,
-        },
-        "log-event": {
-            "message": "test",
-            "level": 3,
-        },
-    }
+    messages = [
+        (
+            "check-ip",
+            {
+                "src": ipaddress.IPv4Address("192.168.1.1"),
+                "dst": ipaddress.IPv4Address("10.0.0.1"),
+            },
+        ),
+        ("check-user", {"username": "admin", "active": True, "score": 95}),
+        ("log-event", {"message": "test", "level": 3}),
+    ]
 
     encoded = encoder.encode_message_list(messages)
     result, offset = decoder.decode_list_of_messages(encoded, 0, len(encoded))
@@ -182,7 +178,7 @@ async def test_roundtrip_message_list_complex():
 
 @pytest.mark.asyncio
 async def test_roundtrip_message_list_with_offset():
-    messages = {"test": {"arg": 1}}
+    messages = [("test", {"arg": 1})]
     prefix = b"\xaa\xbb\xcc"
 
     encoded_messages = encoder.encode_message_list(messages)
@@ -340,13 +336,16 @@ async def test_roundtrip_full_notify_payload():
         frame_id=456,
     )
 
-    messages = {
-        "check-request": {
-            "method": "GET",
-            "path": "/api/test",
-            "src": ipaddress.IPv4Address("192.168.1.100"),
-        }
-    }
+    messages = [
+        (
+            "check-request",
+            {
+                "method": "GET",
+                "path": "/api/test",
+                "src": ipaddress.IPv4Address("192.168.1.100"),
+            },
+        )
+    ]
 
     encoded_metadata = encoder.encode_metadata(metadata)
     encoded_messages = encoder.encode_message_list(messages)

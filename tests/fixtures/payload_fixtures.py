@@ -175,14 +175,21 @@ def kv_list_case(request):
 
 @pytest.fixture(
     params=[
-        # (messages_dict, description)
+        # (messages, description)
         (
-            {"check-ip": {"src": "192.168.1.1"}},
+            [("check-ip", {"src": "192.168.1.1"})],
             "Message list: single message with 1 arg",
         ),
-        ({}, "Message list: empty"),
-        ({"msg1": {"a": 1, "b": 2}, "msg2": {"x": True}}, "Message list: 2 messages"),
-        ({"test": {}}, "Message list: message with no args"),
+        ([], "Message list: empty"),
+        (
+            [("msg1", {"a": 1, "b": 2}), ("msg2", {"x": True})],
+            "Message list: 2 messages",
+        ),
+        ([("test", {})], "Message list: message with no args"),
+        (
+            [("dup", {"a": 1}), ("dup", {"a": 2})],
+            "Message list: duplicate message names",
+        ),
     ],
     ids=lambda case: case[1],
 )
@@ -193,26 +200,31 @@ def message_list_data(request):
 
 @pytest.fixture(
     params=[
-        # (messages_dict, encoded_bytes, description)
+        # (messages, encoded_bytes, description)
         (
-            {"check-ip": {"src": "192.168.1.1"}},
+            [("check-ip", {"src": "192.168.1.1"})],
             b"\x08check-ip\x01\x03src\x08\x0b192.168.1.1",
             "Message list: single message with 1 arg",
         ),
         (
-            {},
+            [],
             b"",
             "Message list: empty",
         ),
         (
-            {"msg1": {"a": 1, "b": 2}, "msg2": {"x": True}},
+            [("msg1", {"a": 1, "b": 2}), ("msg2", {"x": True})],
             b"\x04msg1\x02\x01a\x04\x01\x01b\x04\x02\x04msg2\x01\x01x\x11",
             "Message list: 2 messages",
         ),
         (
-            {"test": {}},
+            [("test", {})],
             b"\x04test\x00",
             "Message list: message with no args",
+        ),
+        (
+            [("dup", {"a": 1}), ("dup", {"a": 2})],
+            b"\x03dup\x01\x01a\x04\x01\x03dup\x01\x01a\x04\x02",
+            "Message list: duplicate message names",
         ),
     ],
     ids=lambda case: case[2],

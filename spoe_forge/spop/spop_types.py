@@ -20,7 +20,9 @@ SpoaDataType: TypeAlias = (
     int | bool | ipaddress.IPv4Address | ipaddress.IPv6Address | bytes | str | None
 )
 
-Messages: TypeAlias = dict[str, dict[str, SpoaDataType]]
+# Ordered (name, args) pairs - a NOTIFY frame may legally carry the same
+# message name more than once, so this must not be keyed by name
+Messages: TypeAlias = list[tuple[str, dict[str, SpoaDataType]]]
 
 
 @dataclass

@@ -111,7 +111,7 @@ async def test_notify_handler_processes_single_message():
     def handler(ctx: AgentContext):
         return [SetVarAction(scope=ActionScope.SESSION, name="test", value=42)]
 
-    messages = {"test-message": {"arg": "value"}}
+    messages = [("test-message", {"arg": "value"})]
     actions = await forge._notify_handler(messages)
 
     assert len(actions) == 1
@@ -132,7 +132,7 @@ async def test_notify_handler_processes_multiple_messages():
     def handler2(ctx: AgentContext):
         return [SetVarAction(scope=ActionScope.SESSION, name="var2", value=2)]
 
-    messages = {"message1": {}, "message2": {}}
+    messages = [("message1", {}), ("message2", {})]
     actions = await forge._notify_handler(messages)
 
     assert len(actions) == 2
@@ -148,7 +148,7 @@ async def test_notify_handler_handles_empty_action_list():
     def handler(ctx: AgentContext):
         return []
 
-    messages = {"test-message": {}}
+    messages = [("test-message", {})]
     actions = await forge._notify_handler(messages)
 
     assert actions == []
@@ -162,7 +162,7 @@ async def test_notify_handler_handles_none_return():
     def handler(ctx: AgentContext):
         return None
 
-    messages = {"test-message": {}}
+    messages = [("test-message", {})]
     actions = await forge._notify_handler(messages)
 
     assert actions == []
@@ -176,7 +176,7 @@ async def test_notify_handler_raises_on_invalid_return_type():
     def handler(ctx: AgentContext):
         return "invalid"  # Should be list
 
-    messages = {"test-message": {}}
+    messages = [("test-message", {})]
 
     with pytest.raises(SpoeAgentError, match="did not return list or None"):
         await forge._notify_handler(messages)
@@ -190,7 +190,7 @@ async def test_notify_handler_logs_actions():
     def handler(ctx: AgentContext):
         return [SetVarAction(scope=ActionScope.SESSION, name="test", value=1)]
 
-    messages = {"test-message": {}}
+    messages = [("test-message", {})]
 
     with patch.object(forge, "_logger") as mock_logger:
         await forge._notify_handler(messages)
@@ -208,7 +208,7 @@ async def test_notify_handler_passes_through_registry_exceptions():
     def handler(ctx: AgentContext):
         raise ValueError("Handler error")
 
-    messages = {"test-message": {}}
+    messages = [("test-message", {})]
 
     with pytest.raises(SpoeAgentError):
         await forge._notify_handler(messages)
@@ -218,7 +218,7 @@ async def test_notify_handler_passes_through_registry_exceptions():
 async def test_notify_handler_with_unregistered_message():
     forge = SpoeForge(name="test-agent")
 
-    messages = {"unregistered-message": {}}
+    messages = [("unregistered-message", {})]
     actions = await forge._notify_handler(messages)
 
     assert actions == []
@@ -236,7 +236,7 @@ async def test_notify_handler_aggregates_multiple_actions_from_single_handler():
             SetVarAction(scope=ActionScope.SESSION, name="var3", value=3),
         ]
 
-    messages = {"test-message": {}}
+    messages = [("test-message", {})]
     actions = await forge._notify_handler(messages)
 
     assert len(actions) == 3
@@ -384,7 +384,7 @@ async def test_full_message_flow():
             SetVarAction(scope=ActionScope.SESSION, name="score", value=95),
         ]
 
-    messages = {"check-ip": {"src": "192.168.1.1", "dst": "10.0.0.1"}}
+    messages = [("check-ip", {"src": "192.168.1.1", "dst": "10.0.0.1"})]
 
     actions = await forge._notify_handler(messages)
 
@@ -409,10 +409,10 @@ async def test_multiple_handlers_integration():
     def check_rate(ctx: AgentContext):
         return [SetVarAction(scope=ActionScope.SESSION, name="rate_ok", value=True)]
 
-    messages = {
-        "check-auth": {"token": "abc123"},
-        "check-rate-limit": {"ip": "1.2.3.4"},
-    }
+    messages = [
+        ("check-auth", {"token": "abc123"}),
+        ("check-rate-limit", {"ip": "1.2.3.4"}),
+    ]
 
     actions = await forge._notify_handler(messages)
 
@@ -437,7 +437,7 @@ async def test_handler_with_real_context_usage():
             SetVarAction(scope=ActionScope.REQUEST, name="has_auth", value=has_auth),
         ]
 
-    messages = {"process-request": {"method": "POST", "path": "/api/users"}}
+    messages = [("process-request", {"method": "POST", "path": "/api/users"})]
 
     actions = await forge._notify_handler(messages)
 

@@ -138,7 +138,7 @@ def test_encode_message_list_empty():
 
 
 def test_encode_message_list_calls_lower_level_functions():
-    test_messages = {"test": {"a": 1}}
+    test_messages = [("test", {"a": 1})]
 
     with (
         patch("spoe_forge.spop.encoders.payloads.encode_string") as mock_encode_string,
@@ -159,7 +159,7 @@ def test_encode_message_list_calls_lower_level_functions():
 
 def test_encode_message_list_raises_on_too_many_args():
     large_message = {f"arg{i}": i for i in range(256)}
-    messages = {"test": large_message}
+    messages = [("test", large_message)]
 
     with pytest.raises(SpopEncodeError, match="too many args"):
         payload.encode_message_list(messages)
