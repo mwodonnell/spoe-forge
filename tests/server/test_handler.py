@@ -560,7 +560,8 @@ async def test_core_handler_handles_spoeforge_error():
 
 
 @pytest.mark.asyncio
-async def test_core_handler_handles_connection_reset():
+@pytest.mark.parametrize("teardown_error", [ConnectionResetError, BrokenPipeError])
+async def test_core_handler_handles_peer_teardown(teardown_error):
     handler, reader, writer = create_handler()
 
     haproxy_hello = Frame.construct(
@@ -574,14 +575,13 @@ async def test_core_handler_handles_connection_reset():
     )
 
     with (
-        patch.object(
-            Frame, "decode", side_effect=[haproxy_hello, ConnectionResetError()]
-        ),
+        patch.object(Frame, "decode", side_effect=[haproxy_hello, teardown_error()]),
         patch("spoe_forge.server.handler.logger") as mock_logger,
     ):
         await handler.core_handler()
 
         writer.close.assert_called_once()
         assert any(
-            "Connection reset" in str(call) for call in mock_logger.debug.call_args_list
+            "Connection closed by HAProxy" in str(call)
+            for call in mock_logger.debug.call_args_list
         )

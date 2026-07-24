@@ -292,11 +292,12 @@ class ForgeHandler:
                     exc_info=True,
                 )
 
-        except* ConnectionResetError:
-            # Expected case from HAProxy - we treat it as a graceful disconnect
-            logger.debug("Connection reset by HAProxy")
+        except* ConnectionError:
+            # Expected teardown from HAProxy - reset vs broken pipe is
+            # platform/timing-dependent, so treat the whole family as graceful
+            logger.debug("Connection closed by HAProxy")
 
         try:
             await self.close_connection()
-        except ConnectionResetError:
-            logger.debug("Connection reset by HAProxy while closing")
+        except ConnectionError:
+            logger.debug("Connection closed by HAProxy while closing")
