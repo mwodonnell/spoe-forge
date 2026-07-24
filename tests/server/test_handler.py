@@ -13,10 +13,17 @@ from spoe_forge.spop.constants import ActionScope
 from spoe_forge.spop.constants import FrameType
 from spoe_forge.spop.exception import SpopEncodeError
 from spoe_forge.spop.exception import SpopFrameTooBigError
+from spoe_forge.spop.encoders.data_types import encode_dt_bool
+from spoe_forge.spop.encoders.data_types import encode_frame_len
+from spoe_forge.spop.encoders.data_types import encode_string
+from spoe_forge.spop.encoders.data_types import encode_tiny_int
+from spoe_forge.spop.encoders.payloads import encode_metadata
 from spoe_forge.spop.frame import Ack
 from spoe_forge.spop.frame import AgentHello
 from spoe_forge.spop.frame import Disconnect
 from spoe_forge.spop.frame import Frame
+from spoe_forge.spop.spop_types import Flags
+from spoe_forge.spop.spop_types import MetaData
 from spoe_forge.spop.spop_types import SetVarAction
 from tests.utils import create_mock_streams, create_handler, create_stream_reader
 
@@ -191,6 +198,53 @@ async def test_send_disconnect_on_error_sends_disconnect():
 
         assert result is True
         writer.write.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_send_disconnect_on_error_truncates_long_message():
+    handler, reader, writer = create_handler()
+
+    with patch("spoe_forge.server.handler.logger"):
+        result = await handler.send_disconnect_on_error(
+            DisconnectCode.PROTOCOL_ERROR, "x" * 5000
+        )
+
+    assert result is True
+    frame = await Frame.decode(create_stream_reader(writer.write.call_args[0][0]), 4096)
+    assert frame.message == "x" * 256
+
+
+@pytest.mark.asyncio
+async def test_adversarial_decode_error_still_sends_bounded_disconnect():
+    handler, reader, writer = create_handler()
+
+    # A maximally legal NOTIFY: huge message name plus a duplicated arg, so the
+    # decode error text embeds ~4KB of peer-controlled content
+    kv_pair = encode_string("k") + encode_dt_bool(True)
+    payload = (
+        encode_tiny_int(FrameType.NOTIFY)
+        + encode_metadata(
+            MetaData(flags=Flags(FIN=True, ABORT=False), stream_id=1, frame_id=1)
+        )
+        + encode_string("M" * 4000)
+        + encode_tiny_int(2)
+        + kv_pair
+        + kv_pair
+    )
+    assert len(payload) <= 4096
+
+    handler.reader = _open_reader(
+        _hello_bytes() + encode_frame_len(len(payload)) + payload
+    )
+
+    with patch("spoe_forge.server.handler.logger"):
+        await asyncio.wait_for(handler.core_handler(), timeout=2)
+
+    frames = await _written_frames(writer)
+    assert isinstance(frames[-1], Disconnect)
+    assert frames[-1].status_code == DisconnectCode.PROTOCOL_ERROR
+    assert len(frames[-1].message) <= 256
+    writer.close.assert_called_once()
 
 
 @pytest.mark.asyncio

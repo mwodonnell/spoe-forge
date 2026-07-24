@@ -7,6 +7,7 @@ from typing import Awaitable
 
 from spoe_forge.exception import SpoeForgeError
 from spoe_forge.server.configuration import ServerConfiguration
+from spoe_forge.server.constants import DISCONNECT_MESSAGE_MAX_LENGTH
 from spoe_forge.server.constants import DisconnectCode
 from spoe_forge.server.exceptions import CloseConnection
 from spoe_forge.spop.encoders.payloads import encode_action_list
@@ -106,6 +107,8 @@ class ForgeHandler:
         :param str message: Human-readable disconnect message
         :return: True if disconnect frame was sent successfully, False otherwise
         """
+        message = message[:DISCONNECT_MESSAGE_MAX_LENGTH]
+
         logger.error(
             f"SPOA server encountered an error, disconnecting: {status_code.name}: {message}"
         )
