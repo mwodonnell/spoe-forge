@@ -62,7 +62,9 @@ class ForgeHandler:
         Encode and send a frame to HAProxy.
 
         :param Frame frame: Frame to encode and send
-        :return: True if frame was sent successfully, False otherwise
+        :return: True if frame was sent, False if the stream is closing
+        :raises SpopEncodeError: If the frame fails to encode
+        :raises SpopFrameTooBigError: If the frame exceeds the negotiated size
         """
         if self.writer.is_closing():
             logger.warning(
@@ -70,13 +72,7 @@ class ForgeHandler:
             )
             return False
 
-        try:
-            self.writer.write(frame.encode(self.config.max_frame_size))
-        except SpopEncodeError as e:
-            logger.warning(
-                f"Failed to write frame to stream - {frame.frame_type.name} - {e}"
-            )
-            return False
+        self.writer.write(frame.encode(self.config.max_frame_size))
 
         await self.writer.drain()
         return True
@@ -170,6 +166,10 @@ class ForgeHandler:
         """
         Run the agent handler for one NOTIFY frame and send its ACK.
 
+        Handler output that fails to encode (oversized or unencodable action
+        values) is logged and answered with an empty ACK - the same forgiving
+        policy as handler exceptions, containing the failure to this stream.
+
         Sending directly from the task is safe: the frame is fully encoded and
         written with a single writer.write() call, so concurrent tasks cannot
         interleave frame bytes.
@@ -187,7 +187,20 @@ class ForgeHandler:
                 actions=actions,
             )
 
-            await self.send_frame(ack)
+            try:
+                await self.send_frame(ack)
+            except (SpopEncodeError, SpopFrameTooBigError) as e:
+                logger.error(
+                    f"Failed to encode ACK for stream {frame.metadata.stream_id}: {e} - sending empty ACK"
+                )
+
+                empty_ack = Frame.construct(
+                    FrameType.ACK,
+                    stream_id=frame.metadata.stream_id,
+                    frame_id=frame.metadata.frame_id,
+                    actions=[],
+                )
+                await self.send_frame(empty_ack)
         finally:
             slots.release()
 
