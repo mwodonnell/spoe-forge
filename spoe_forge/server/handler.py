@@ -9,6 +9,7 @@ from spoe_forge.exception import SpoeForgeError
 from spoe_forge.server.configuration import ServerConfiguration
 from spoe_forge.server.constants import DisconnectCode
 from spoe_forge.server.exceptions import CloseConnection
+from spoe_forge.spop.encoders.payloads import encode_action_list
 from spoe_forge.spop.constants import FrameType
 from spoe_forge.spop.exception import SpopEncodeError
 from spoe_forge.spop.exception import SpopEOFError
@@ -167,8 +168,9 @@ class ForgeHandler:
         Run the agent handler for one NOTIFY frame and send its ACK.
 
         Handler output that fails to encode (oversized or unencodable action
-        values) is logged and answered with an empty ACK - the same forgiving
-        policy as handler exceptions, containing the failure to this stream.
+        values) is contained to this stream: following HAProxy's reference
+        agent, the offending actions are dropped and the ACK still ships with
+        every action that encodes and fits - possibly none.
 
         Sending directly from the task is safe: the frame is fully encoded and
         written with a single writer.write() call, so concurrent tasks cannot
@@ -191,18 +193,58 @@ class ForgeHandler:
                 await self.send_frame(ack)
             except (SpopEncodeError, SpopFrameTooBigError) as e:
                 logger.error(
-                    f"Failed to encode ACK for stream {frame.metadata.stream_id}: {e} - sending empty ACK"
+                    f"Failed to encode ACK for stream {frame.metadata.stream_id}: {e} - "
+                    f"acking with salvageable actions only"
                 )
-
-                empty_ack = Frame.construct(
-                    FrameType.ACK,
-                    stream_id=frame.metadata.stream_id,
-                    frame_id=frame.metadata.frame_id,
-                    actions=[],
-                )
-                await self.send_frame(empty_ack)
+                await self.send_frame(self._salvaged_ack(frame, actions))
         finally:
             slots.release()
+
+    def _salvaged_ack(self, frame: Notify, actions: list[Action]) -> Frame:
+        """
+        Build an ACK keeping only the actions that encode and fit the frame.
+
+        Mirrors HAProxy's reference agent, which acks with whatever actions
+        survived a processing failure rather than dropping the whole reply.
+
+        :param Notify frame: NOTIFY frame being acknowledged
+        :param list[Action] actions: Handler actions, possibly bad
+        :return: ACK frame guaranteed to encode within the negotiated size
+        """
+        empty_ack = Frame.construct(
+            FrameType.ACK,
+            stream_id=frame.metadata.stream_id,
+            frame_id=frame.metadata.frame_id,
+            actions=[],
+        )
+        budget = self.config.max_frame_size - (
+            len(empty_ack.encode(self.config.max_frame_size)) - 4
+        )
+
+        salvaged = []
+        used = 0
+        for action in actions:
+            try:
+                encoded = encode_action_list([action])
+            except SpopEncodeError as e:
+                logger.error(f"Dropping unencodable action {action.name!r}: {e}")
+                continue
+
+            if used + len(encoded) > budget:
+                logger.error(
+                    f"Dropping action {action.name!r} - ACK would exceed max frame size"
+                )
+                continue
+
+            salvaged.append(action)
+            used += len(encoded)
+
+        return Frame.construct(
+            FrameType.ACK,
+            stream_id=frame.metadata.stream_id,
+            frame_id=frame.metadata.frame_id,
+            actions=salvaged,
+        )
 
     async def _read_frames(
         self, tg: asyncio.TaskGroup, slots: asyncio.Semaphore
