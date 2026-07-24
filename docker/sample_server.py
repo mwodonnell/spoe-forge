@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from spoe_forge import SpoeForge, AgentContext, SetVarAction, ActionScope
@@ -7,17 +8,25 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler(),
     ],
-    level=logging.INFO,
+    level=logging.DEBUG,
 )
 
-agent = SpoeForge(name="sample-agent")
+agent = SpoeForge(name="sample-agent", debug=True)
 logger = logging.getLogger("sample-spoe-server")
 
 
 @agent.message("test-ping")
-def ping(ctx: AgentContext):
+async def ping(ctx: AgentContext):
     ua = ctx.get_arg("ua")
-    logger.info(f"received ua arg: {ua!r}")
+    logger.info(f"handler start: ua={ua!r}")
+
+    # A user-agent containing "slow" simulates a slow backend call, letting the
+    # docker harness demonstrate pipelined (out-of-order) ACKs. Kept under
+    # HAProxy's 1s processing timeout.
+    if ua and "slow" in ua:
+        await asyncio.sleep(0.5)
+
+    logger.info(f"handler done: ua={ua!r}")
     return [
         SetVarAction(scope=ActionScope.REQUEST, name="spoe_arg", value=f"ua was: {ua}")
     ]
