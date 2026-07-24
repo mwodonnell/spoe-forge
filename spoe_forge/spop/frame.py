@@ -109,9 +109,11 @@ class Frame(ABC):
         frame_len = len(out)
         encoded = bytearray(encode_frame_len(frame_len)) + out
 
-        if len(encoded) > max_frame_size:
+        # Per SPOP, max-frame-size bounds the frame itself - the 4-byte length
+        # prefix is reserved on top of it (spec: range [256, tune.bufsize-4])
+        if frame_len > max_frame_size:
             raise SpopFrameTooBigError(
-                f"Total frame size {len(encoded)} exceeds maximum size {max_frame_size}"
+                f"Frame size {frame_len} exceeds maximum size {max_frame_size}"
             )
 
         logger.debug(f"Encoded {self.frame_type.name} frame")
@@ -151,10 +153,11 @@ class Frame(ABC):
         logger.debug(f"Frame length: {frame_len} bytes")
 
         # Reject before buffering - the length is peer-controlled and unvalidated.
-        # Mirrors the encode-side check: total size includes the 4-byte length prefix.
-        if frame_len + 4 > max_frame_size:
+        # Per SPOP, max-frame-size bounds the frame itself, excluding the 4-byte
+        # length prefix, so a frame_len equal to the negotiated max is legal.
+        if frame_len > max_frame_size:
             raise SpopFrameTooBigError(
-                f"Total frame size {frame_len + 4} exceeds maximum size {max_frame_size}"
+                f"Frame size {frame_len} exceeds maximum size {max_frame_size}"
             )
 
         try:
