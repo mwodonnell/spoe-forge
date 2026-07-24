@@ -24,11 +24,18 @@ def create_mock_streams():
     return reader, writer
 
 
-def create_handler(notify_handler=None):
+def create_handler(notify_handler=None, max_concurrent_frames: int = 100):
     """Create ForgeHandler with mocked dependencies."""
     if notify_handler is None:
         notify_handler = AsyncMock(return_value=[])
 
     config = ServerConfiguration()
     reader, writer = create_mock_streams()
-    return ForgeHandler(notify_handler, config, reader, writer), reader, writer
+    handler = ForgeHandler(
+        notify_handler,
+        config,
+        reader,
+        writer,
+        max_concurrent_frames=max_concurrent_frames,
+    )
+    return handler, reader, writer
