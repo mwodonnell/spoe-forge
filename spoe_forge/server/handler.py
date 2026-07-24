@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from asyncio import StreamReader
 from asyncio import StreamWriter
@@ -7,6 +8,7 @@ from typing import Awaitable
 from spoe_forge.exception import SpoeForgeError
 from spoe_forge.server.configuration import ServerConfiguration
 from spoe_forge.server.constants import DisconnectCode
+from spoe_forge.server.exceptions import CloseConnection
 from spoe_forge.spop.constants import FrameType
 from spoe_forge.spop.exception import SpopEncodeError
 from spoe_forge.spop.exception import SpopEOFError
@@ -164,91 +166,124 @@ class ForgeHandler:
 
         return res
 
-    async def handle_notify_cycle(self) -> bool:
+    async def _process_notify(self, frame: Notify, slots: asyncio.Semaphore) -> None:
         """
-        Handle a single NOTIFY/ACK cycle or HAPROXY_DISCONNECT.
+        Run the agent handler for one NOTIFY frame and send its ACK.
 
-        Receives NOTIFY frame, calls agent to process messages, and sends ACK with actions.
-        Also handles graceful HAPROXY_DISCONNECT frames and EOF conditions.
+        Sending directly from the task is safe: the frame is fully encoded and
+        written with a single writer.write() call, so concurrent tasks cannot
+        interleave frame bytes.
 
-        :return: True if cycle completed successfully, False if connection should close
+        :param Notify frame: Decoded NOTIFY frame to process
+        :param asyncio.Semaphore slots: Concurrency slot to release when done
         """
         try:
-            frame = await Frame.decode(self.reader, self.config.max_frame_size)
-        except SpopEOFError:
-            logger.debug("Stream disconnected with EOF")
-            return False
+            actions = await self.notify_handler(frame.messages)
 
-        # Handle graceful disconnect from HAProxy
-        if isinstance(frame, Disconnect):
-            if frame.status_code == DisconnectCode.NORMAL:
-                logger.debug("Connection closed gracefully by HAProxy")
-            else:
-                logger.warning(
-                    f"Received HAPROXY_DISCONNECT: {frame.message} (status: {frame.status_code})"
+            ack = Frame.construct(
+                FrameType.ACK,
+                stream_id=frame.metadata.stream_id,
+                frame_id=frame.metadata.frame_id,
+                actions=actions,
+            )
+
+            await self.send_frame(ack)
+        finally:
+            slots.release()
+
+    async def _read_frames(
+        self, tg: asyncio.TaskGroup, slots: asyncio.Semaphore
+    ) -> None:
+        """
+        Read frames until the connection ends, dispatching NOTIFYs as tasks.
+
+        Acquires a concurrency slot before each read so that at capacity the
+        loop stops reading and TCP flow control pushes back on HAProxy.
+
+        :param asyncio.TaskGroup tg: Task group owning the NOTIFY tasks
+        :param asyncio.Semaphore slots: Per-connection concurrency bound
+        :raises CloseConnection: When the connection should close gracefully
+        """
+        while True:
+            await slots.acquire()
+
+            try:
+                frame = await Frame.decode(self.reader, self.config.max_frame_size)
+            except SpopEOFError:
+                logger.debug("Stream disconnected with EOF")
+                raise CloseConnection()
+
+            if isinstance(frame, Disconnect):
+                if frame.status_code == DisconnectCode.NORMAL:
+                    logger.debug("Connection closed gracefully by HAProxy")
+                else:
+                    logger.warning(
+                        f"Received HAPROXY_DISCONNECT: {frame.message} (status: {frame.status_code})"
+                    )
+
+                await self.send_disconnect(
+                    status_code=DisconnectCode.NORMAL,
+                    message="Disconnecting normally",
                 )
+                raise CloseConnection()
 
-            # Respond with AGENT_DISCONNECT
-            await self.send_disconnect(
-                status_code=DisconnectCode.NORMAL,
-                message="Disconnecting normally",
-            )
-            return False
+            if not isinstance(frame, Notify):
+                await self.send_disconnect_on_error(
+                    status_code=DisconnectCode.INVALID_FRAME_RECEIVED,
+                    message=f"Expected NOTIFY or HAPROXY_DISCONNECT, received {frame.frame_type.name}",
+                )
+                raise CloseConnection()
 
-        if not isinstance(frame, Notify):
-            await self.send_disconnect_on_error(
-                status_code=DisconnectCode.INVALID_FRAME_RECEIVED,
-                message=f"Expected NOTIFY or HAPROXY_DISCONNECT, received {frame.frame_type.name}",
-            )
-            return False
-
-        actions = await self.notify_handler(frame.messages)
-
-        ack = Frame.construct(
-            FrameType.ACK,
-            stream_id=frame.metadata.stream_id,
-            frame_id=frame.metadata.frame_id,
-            actions=actions,
-        )
-
-        return await self.send_frame(ack)
+            tg.create_task(self._process_notify(frame, slots))
 
     async def core_handler(self):
         """
         Main connection lifecycle handler.
 
-        Executes handshake followed by NOTIFY/ACK processing loop until connection closes.
-        Handles protocol errors and connection resets gracefully.
+        Executes handshake followed by the NOTIFY/ACK loop until the connection
+        closes. When pipelining is negotiated, NOTIFY frames are processed
+        concurrently (bounded by max_concurrent_frames) and ACKs are sent in
+        completion order, which SPOP explicitly allows; otherwise concurrency
+        is 1, preserving strict serial behavior. A protocol error in any task
+        cancels the rest and disconnects; disconnect/EOF cancels in-flight
+        tasks rather than draining them.
         """
         try:
-            if not await self.handle_handshake():
-                await self.close_connection()
-                return
+            async with asyncio.TaskGroup() as tg:
+                if not await self.handle_handshake():
+                    raise CloseConnection()
 
-            while True:
-                if not await self.handle_notify_cycle():
-                    await self.close_connection()
-                    break
+                limit = (
+                    self.config.max_concurrent_frames
+                    if "pipelining" in self.config.capabilities
+                    else 1
+                )
+                await self._read_frames(tg, asyncio.Semaphore(limit))
 
-        except SpopFrameTooBigError as e:
+        except* CloseConnection:
+            pass
+
+        except* SpopFrameTooBigError as eg:
             await self.send_disconnect_on_error(
                 status_code=DisconnectCode.FRAME_TOO_BIG,
-                message=str(e),
+                message=str(eg.exceptions[0]),
             )
-            await self.close_connection()
 
-        except SpoeForgeError as e:
+        except* SpoeForgeError as eg:
             if not await self.send_disconnect_on_error(
                 status_code=DisconnectCode.PROTOCOL_ERROR,
-                message=str(e),
+                message=str(eg.exceptions[0]),
             ):
                 logger.error(
-                    f"Failed to send disconnect on error while handling: {str(e)}",
+                    f"Failed to send disconnect on error while handling: {eg.exceptions[0]}",
                     exc_info=True,
                 )
 
-            await self.close_connection()
-
-        except ConnectionResetError:
+        except* ConnectionResetError:
             # Expected case from HAProxy - we treat it as a graceful disconnect
             logger.debug("Connection reset by HAProxy")
+
+        try:
+            await self.close_connection()
+        except ConnectionResetError:
+            logger.debug("Connection reset by HAProxy while closing")

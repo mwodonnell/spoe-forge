@@ -1,5 +1,6 @@
 import logging
 
+from spoe_forge.server.constants import DEFAULT_MAX_CONCURRENT_FRAMES
 from spoe_forge.server.constants import DEFAULT_MAX_FRAME_SIZE
 from spoe_forge.server.constants import SPOE_CAPABILITIES
 from spoe_forge.server.constants import SPOE_VERSION
@@ -23,14 +24,21 @@ class ServerConfiguration:
     _server_compatible: bool
 
     _max_frame_size: int
+    _max_concurrent_frames: int
     _capabilities: list[str]
     _version: str
 
-    def __init__(self, max_frame_size: int = DEFAULT_MAX_FRAME_SIZE) -> None:
+    def __init__(
+        self,
+        max_frame_size: int = DEFAULT_MAX_FRAME_SIZE,
+        max_concurrent_frames: int = DEFAULT_MAX_CONCURRENT_FRAMES,
+    ) -> None:
         """
         Initialize server configuration with defaults.
 
         :param int max_frame_size: Maximum frame size to negotiate with HAProxy
+        :param int max_concurrent_frames: Bound on concurrently processed NOTIFY
+            frames when pipelining is negotiated (not itself negotiated)
         """
         self._version = SPOE_VERSION
         self._capabilities = []
@@ -38,6 +46,7 @@ class ServerConfiguration:
         self._max_frame_size = (
             max_frame_size  # Set to default until negotiation complete
         )
+        self._max_concurrent_frames = max_concurrent_frames
         self._server_compatible = True
 
     def _check_version_compatibility(self, ha_versions: list[str]):
@@ -142,6 +151,11 @@ class ServerConfiguration:
     def max_frame_size(self) -> int:
         """Get negotiated maximum frame size."""
         return self._max_frame_size
+
+    @property
+    def max_concurrent_frames(self) -> int:
+        """Get the per-connection bound on concurrently processed NOTIFY frames."""
+        return self._max_concurrent_frames
 
     @property
     def capabilities(self) -> list[str]:

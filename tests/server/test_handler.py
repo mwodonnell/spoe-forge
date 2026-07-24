@@ -1,3 +1,4 @@
+import asyncio
 import struct
 from unittest.mock import AsyncMock
 from unittest.mock import patch
@@ -11,8 +12,9 @@ from spoe_forge.server.handler import ForgeHandler
 from spoe_forge.spop.constants import ActionScope
 from spoe_forge.spop.constants import FrameType
 from spoe_forge.spop.exception import SpopEncodeError
-from spoe_forge.spop.exception import SpopEOFError
 from spoe_forge.spop.exception import SpopFrameTooBigError
+from spoe_forge.spop.frame import Ack
+from spoe_forge.spop.frame import AgentHello
 from spoe_forge.spop.frame import Disconnect
 from spoe_forge.spop.frame import Frame
 from spoe_forge.spop.spop_types import SetVarAction
@@ -303,176 +305,217 @@ async def test_handle_handshake_closes_on_healthcheck():
         )
 
 
-@pytest.mark.asyncio
-async def test_handle_notify_cycle_success():
-    notify_handler = AsyncMock(
-        return_value=[SetVarAction(scope=ActionScope.SESSION, name="test", value=42)]
-    )
-    handler, reader, writer = create_handler(notify_handler)
-
-    notify = Frame.construct(
-        FrameType.NOTIFY,
-        stream_id=1,
-        frame_id=1,
-        messages=[("test", {"arg": "value"})],
-    )
-
-    with patch.object(Frame, "decode", return_value=notify):
-        result = await handler.handle_notify_cycle()
-
-        assert result is True
-        notify_handler.assert_called_once_with([("test", {"arg": "value"})])
-        writer.write.assert_called_once()  # ACK sent
-
-
-@pytest.mark.asyncio
-async def test_handle_notify_cycle_handles_eof():
-    handler, reader, writer = create_handler()
-
-    with patch.object(Frame, "decode", side_effect=SpopEOFError()):
-        with patch("spoe_forge.server.handler.logger") as mock_logger:
-            result = await handler.handle_notify_cycle()
-
-            assert result is False
-            mock_logger.debug.assert_called()
-
-
-@pytest.mark.asyncio
-async def test_handle_notify_cycle_handles_disconnect():
-    handler, reader, writer = create_handler()
-
-    disconnect = Frame.construct(
-        FrameType.HAPROXY_DISCONNECT,
-        stream_id=0,
-        frame_id=0,
-        status_code=DisconnectCode.NORMAL,
-        message="Normal disconnect",
-    )
-
-    with (
-        patch.object(Frame, "decode", return_value=disconnect),
-        patch("spoe_forge.server.handler.logger") as mock_logger,
-    ):
-        result = await handler.handle_notify_cycle()
-
-        assert result is False
-        writer.write.assert_called_once()
-        mock_logger.debug.assert_called()
-
-
-@pytest.mark.asyncio
-async def test_handle_notify_cycle_rejects_wrong_frame_type():
-    handler, reader, writer = create_handler()
-
-    agent_hello = Frame.construct(
-        FrameType.AGENT_HELLO,
-        stream_id=0,
-        frame_id=0,
-        version="2.0",
-        max_frame_size=16384,
-        capabilities=["pipelining"],
-    )
-
-    with (
-        patch.object(Frame, "decode", return_value=agent_hello),
-        patch("spoe_forge.server.handler.logger"),
-    ):
-        result = await handler.handle_notify_cycle()
-
-        assert result is False
-
-
-@pytest.mark.asyncio
-async def test_handle_notify_cycle_passes_messages_to_handler():
-    captured_messages = None
-
-    async def capture_handler(messages):
-        nonlocal captured_messages
-        captured_messages = messages
-        return []
-
-    handler, reader, writer = create_handler(capture_handler)
-
-    test_messages = [("check-ip", {"src": "192.168.1.1", "dst": "10.0.0.1"})]
-    notify = Frame.construct(
-        FrameType.NOTIFY,
-        stream_id=1,
-        frame_id=1,
-        messages=test_messages,
-    )
-
-    with patch.object(Frame, "decode", return_value=notify):
-        await handler.handle_notify_cycle()
-
-        assert captured_messages == test_messages
-
-
-@pytest.mark.asyncio
-async def test_core_handler_full_flow():
-    notify_handler = AsyncMock(return_value=[])
-    handler, reader, writer = create_handler(notify_handler)
-
-    haproxy_hello = Frame.construct(
+def _hello_bytes(capabilities: list[str] | None = None) -> bytes:
+    frame = Frame.construct(
         FrameType.HAPROXY_HELLO,
         stream_id=0,
         frame_id=0,
         supported_versions=["2.0"],
         max_frame_size=16384,
-        capabilities=["pipelining"],
+        capabilities=["pipelining"] if capabilities is None else capabilities,
         healthcheck=False,
     )
+    return frame.encode(max_frame_size=16384)
 
-    notify1 = Frame.construct(
-        FrameType.NOTIFY, stream_id=1, frame_id=1, messages=[("msg1", {})]
+
+def _notify_bytes(stream_id: int) -> bytes:
+    frame = Frame.construct(
+        FrameType.NOTIFY,
+        stream_id=stream_id,
+        frame_id=stream_id,
+        messages=[("m", {"id": stream_id})],
     )
-    notify2 = Frame.construct(
-        FrameType.NOTIFY, stream_id=1, frame_id=2, messages=[("msg2", {})]
-    )
-    disconnect = Frame.construct(
+    return frame.encode(max_frame_size=16384)
+
+
+def _disconnect_bytes() -> bytes:
+    frame = Frame.construct(
         FrameType.HAPROXY_DISCONNECT,
         stream_id=0,
         frame_id=0,
         status_code=DisconnectCode.NORMAL,
         message="Done",
     )
+    return frame.encode(max_frame_size=16384)
 
-    with (
-        patch.object(
-            Frame, "decode", side_effect=[haproxy_hello, notify1, notify2, disconnect]
-        ),
-        patch("spoe_forge.server.handler.logger"),
-    ):
-        await handler.core_handler()
 
-        assert notify_handler.call_count == 2
-        writer.close.assert_called_once()
+def _open_reader(data: bytes) -> asyncio.StreamReader:
+    reader = asyncio.StreamReader()
+    reader.feed_data(data)
+    return reader
+
+
+async def _written_frames(writer) -> list[Frame]:
+    frames = []
+    for call in writer.write.call_args_list:
+        frames.append(await Frame.decode(create_stream_reader(call[0][0]), 16384))
+    return frames
+
+
+async def _wait_until(cond, timeout: float = 2.0) -> None:
+    async with asyncio.timeout(timeout):
+        while not cond():
+            await asyncio.sleep(0.001)
+
+
+@pytest.mark.asyncio
+async def test_core_handler_full_flow():
+    notify_handler = AsyncMock(return_value=[])
+    handler, reader, writer = create_handler(notify_handler)
+    handler.reader = _open_reader(_hello_bytes() + _notify_bytes(1) + _notify_bytes(2))
+
+    task = asyncio.create_task(handler.core_handler())
+    await _wait_until(lambda: writer.write.call_count >= 3)  # AGENT_HELLO + 2 ACKs
+    handler.reader.feed_data(_disconnect_bytes())
+    await asyncio.wait_for(task, timeout=2)
+
+    assert notify_handler.call_count == 2
+    writer.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_pipelining_sends_acks_in_completion_order():
+    first_gate = asyncio.Event()
+
+    async def notify_handler(messages):
+        if messages[0][1]["id"] == 1:
+            await first_gate.wait()
+        return []
+
+    handler, reader, writer = create_handler(notify_handler)
+    handler.reader = _open_reader(_hello_bytes() + _notify_bytes(1) + _notify_bytes(2))
+
+    task = asyncio.create_task(handler.core_handler())
+    await _wait_until(lambda: writer.write.call_count >= 2)  # ACK for stream 2 first
+    first_gate.set()
+    await _wait_until(lambda: writer.write.call_count >= 3)
+    handler.reader.feed_eof()
+    await asyncio.wait_for(task, timeout=2)
+
+    frames = await _written_frames(writer)
+    assert isinstance(frames[0], AgentHello)
+    assert [f.metadata.stream_id for f in frames[1:]] == [2, 1]
+
+
+@pytest.mark.asyncio
+async def test_serial_without_pipelining_capability():
+    started = []
+    gate = asyncio.Event()
+
+    async def notify_handler(messages):
+        started.append(messages[0][1]["id"])
+        await gate.wait()
+        return []
+
+    handler, reader, writer = create_handler(notify_handler)
+    handler.reader = _open_reader(
+        _hello_bytes([]) + _notify_bytes(1) + _notify_bytes(2)
+    )
+
+    with patch("spoe_forge.server.handler.logger"):
+        task = asyncio.create_task(handler.core_handler())
+        await _wait_until(lambda: len(started) == 1)
+        await asyncio.sleep(0.01)
+
+        assert started == [1]  # second NOTIFY must wait for the first ACK
+
+        gate.set()
+        await _wait_until(lambda: writer.write.call_count >= 3)
+        handler.reader.feed_eof()
+        await asyncio.wait_for(task, timeout=2)
+
+    assert started == [1, 2]
+
+
+@pytest.mark.asyncio
+async def test_concurrency_bounded_by_max_concurrent_frames():
+    started = []
+    gate = asyncio.Event()
+
+    async def notify_handler(messages):
+        started.append(messages[0][1]["id"])
+        await gate.wait()
+        return []
+
+    handler, reader, writer = create_handler(notify_handler, max_concurrent_frames=2)
+    handler.reader = _open_reader(
+        _hello_bytes() + _notify_bytes(1) + _notify_bytes(2) + _notify_bytes(3)
+    )
+
+    task = asyncio.create_task(handler.core_handler())
+    await _wait_until(lambda: len(started) == 2)
+    await asyncio.sleep(0.01)
+
+    assert len(started) == 2  # third frame waits for a free slot
+
+    gate.set()
+    await _wait_until(lambda: writer.write.call_count >= 4)  # AGENT_HELLO + 3 ACKs
+    handler.reader.feed_eof()
+    await asyncio.wait_for(task, timeout=2)
+
+    assert sorted(started) == [1, 2, 3]
+
+
+@pytest.mark.asyncio
+async def test_disconnect_cancels_in_flight_tasks():
+    entered = asyncio.Event()
+    cancelled = False
+
+    async def notify_handler(messages):
+        nonlocal cancelled
+        entered.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled = True
+            raise
+        return []
+
+    handler, reader, writer = create_handler(notify_handler)
+    handler.reader = _open_reader(_hello_bytes() + _notify_bytes(1))
+
+    task = asyncio.create_task(handler.core_handler())
+    await asyncio.wait_for(entered.wait(), timeout=2)
+    handler.reader.feed_data(_disconnect_bytes())
+    await asyncio.wait_for(task, timeout=2)
+
+    assert cancelled is True
+    frames = await _written_frames(writer)
+    assert isinstance(frames[-1], Disconnect)
+    assert frames[-1].status_code == DisconnectCode.NORMAL
+    assert not any(isinstance(f, Ack) for f in frames)
+
+
+@pytest.mark.asyncio
+async def test_task_frame_too_big_disconnects_connection():
+    async def notify_handler(messages):
+        return [SetVarAction(scope=ActionScope.SESSION, name="big", value="x" * 5000)]
+
+    handler, reader, writer = create_handler(notify_handler)
+    handler.reader = _open_reader(_hello_bytes() + _notify_bytes(1))
+
+    with patch("spoe_forge.server.handler.logger"):
+        await asyncio.wait_for(handler.core_handler(), timeout=2)
+
+    frames = await _written_frames(writer)
+    assert isinstance(frames[-1], Disconnect)
+    assert frames[-1].status_code == DisconnectCode.FRAME_TOO_BIG
+    writer.close.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_core_handler_handles_spoeforge_error():
     notify_handler = AsyncMock(side_effect=SpoeForgeError("Test error"))
     handler, reader, writer = create_handler(notify_handler)
+    handler.reader = _open_reader(_hello_bytes() + _notify_bytes(1))
 
-    haproxy_hello = Frame.construct(
-        FrameType.HAPROXY_HELLO,
-        stream_id=0,
-        frame_id=0,
-        supported_versions=["2.0"],
-        max_frame_size=16384,
-        capabilities=["pipelining"],
-        healthcheck=False,
-    )
+    with patch("spoe_forge.server.handler.logger"):
+        await asyncio.wait_for(handler.core_handler(), timeout=2)
 
-    notify = Frame.construct(FrameType.NOTIFY, stream_id=1, frame_id=1, messages=[])
-
-    with (
-        patch.object(Frame, "decode", side_effect=[haproxy_hello, notify]),
-        patch("spoe_forge.server.handler.logger"),
-    ):
-        await handler.core_handler()
-
-        assert writer.write.call_count >= 2
-        writer.close.assert_called_once()
+    frames = await _written_frames(writer)
+    assert isinstance(frames[-1], Disconnect)
+    assert frames[-1].status_code == DisconnectCode.PROTOCOL_ERROR
+    writer.close.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -497,8 +540,7 @@ async def test_core_handler_handles_connection_reset():
     ):
         await handler.core_handler()
 
-        writer.close.assert_not_called()
-        mock_logger.debug.assert_called()
+        writer.close.assert_called_once()
         assert any(
             "Connection reset" in str(call) for call in mock_logger.debug.call_args_list
         )
