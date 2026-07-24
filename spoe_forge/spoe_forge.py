@@ -9,6 +9,7 @@ from typing import Callable
 
 from spoe_forge.log import create_logger
 from spoe_forge.server.configuration import ServerConfiguration
+from spoe_forge.server.constants import DEFAULT_MAX_CONCURRENT_FRAMES
 from spoe_forge.server.constants import DEFAULT_MAX_FRAME_SIZE
 from spoe_forge.server.handler import ForgeHandler
 from spoe_forge.spop.spop_types import Action
@@ -37,16 +38,22 @@ class SpoeForge:
         name: str,
         max_frame_size: int = DEFAULT_MAX_FRAME_SIZE,
         debug: bool = False,
+        max_concurrent_frames: int = DEFAULT_MAX_CONCURRENT_FRAMES,
     ):
         """
         Create a new agent.
 
         :param name: Agent name (for logging/debugging)
+        :param max_frame_size: Maximum SPOP frame size to negotiate with HAProxy
+        :param debug: Enable debug-level logging
+        :param max_concurrent_frames: Per-connection bound on NOTIFY frames
+            processed concurrently when pipelining is negotiated
         """
         self.name = name
         self._registry = AgentRegistry()
         self._max_frame_size = max_frame_size
         self._debug = debug
+        self._max_concurrent_frames = max_concurrent_frames
 
     @cached_property
     def _logger(self) -> Logger:
@@ -116,7 +123,10 @@ class SpoeForge:
         :param StreamWriter writer: AsyncIO stream writer for connection
         """
         # Always create a fresh config object as we need to negotiate compatibility on every connection
-        config = ServerConfiguration(max_frame_size=self._max_frame_size)
+        config = ServerConfiguration(
+            max_frame_size=self._max_frame_size,
+            max_concurrent_frames=self._max_concurrent_frames,
+        )
         handler = ForgeHandler(self._notify_handler, config, reader, writer)
 
         await handler.core_handler()

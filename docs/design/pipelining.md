@@ -107,12 +107,12 @@ sequenceDiagram
 
 ## Ticket plan
 
-1. **[in review]** `feat: concurrent NOTIFY dispatch gated on pipelining capability` — the unified TaskGroup
+1. **[merged, PR #30]** `feat: concurrent NOTIFY dispatch gated on pipelining capability` — the unified TaskGroup
    loop in `ForgeHandler` with the semaphore at a constant default; `except*` mapping in
    `core_handler`. Tests: out-of-order ACKs (slow first handler, fast second), serial behavior
    when pipelining not negotiated, bound honored (N+1th frame waits), disconnect cancels
    in-flight tasks, protocol error in a task disconnects the connection.
-2. `feat: expose max_concurrent_frames on SpoeForge` — constructor plumbing, constants entry,
+2. **[in review]** `feat: expose max_concurrent_frames on SpoeForge` — constructor plumbing, constants entry,
    README feature note, `_find_common_capabilities` comment fix.
 3. `chore: validate pipelining end-to-end in docker harness` — slow-handler variant in
    `docker/sample_server.py`, concurrent-request validation against real HAProxy, record results

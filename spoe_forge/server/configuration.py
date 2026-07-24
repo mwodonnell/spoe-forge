@@ -113,9 +113,8 @@ class ServerConfiguration:
                 "Req/Resp cycles may be slower than they could be."
             )
 
-        # We don't set compatability here as pipelining is the only option available, and we support it w/o
-        # changes to the system - instead just log a warning that HAProxy won't take advantage of it and
-        # move on
+        # Pipelining is optional: without it the connection is processed serially
+        # (one NOTIFY at a time), so we only warn rather than fail compatibility
 
     def negotiate_server_compatibility(
         self,

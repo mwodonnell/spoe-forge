@@ -283,6 +283,23 @@ async def test_handler_creates_fresh_config():
 
 
 @pytest.mark.asyncio
+async def test_handler_passes_max_concurrent_frames_to_config():
+    forge = SpoeForge(name="test-agent", max_concurrent_frames=7)
+
+    reader = AsyncMock(spec=asyncio.StreamReader)
+    writer = MagicMock(spec=asyncio.StreamWriter)
+
+    with patch("spoe_forge.spoe_forge.ForgeHandler") as MockForgeHandler:
+        MockForgeHandler.return_value = AsyncMock()
+
+        await forge._handler(reader, writer)
+
+        config = MockForgeHandler.call_args[0][1]
+
+        assert config.max_concurrent_frames == 7
+
+
+@pytest.mark.asyncio
 async def test_handler_passes_notify_handler_callback():
     forge = SpoeForge(name="test-agent")
 
