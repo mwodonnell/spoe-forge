@@ -9,6 +9,11 @@ SPOE_CAPABILITIES = ["pipelining"]
 DEFAULT_MAX_FRAME_SIZE = 1024 * 4
 """4kb max frame size - set to a comfortably low value"""
 
+DISCONNECT_MESSAGE_MAX_LENGTH = 256
+"""Bound on outbound disconnect message text. Error messages can embed
+peer-controlled content (e.g. decode errors quoting frame data), which must
+never be able to oversize the disconnect frame itself or flood the logs."""
+
 DEFAULT_MAX_CONCURRENT_FRAMES = 100
 """Per-connection bound on NOTIFY frames processed concurrently when pipelining
 is negotiated. Modern HAProxy no longer bounds frames awaiting ACK
