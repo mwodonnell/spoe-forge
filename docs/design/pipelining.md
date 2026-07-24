@@ -112,11 +112,35 @@ sequenceDiagram
    `core_handler`. Tests: out-of-order ACKs (slow first handler, fast second), serial behavior
    when pipelining not negotiated, bound honored (N+1th frame waits), disconnect cancels
    in-flight tasks, protocol error in a task disconnects the connection.
-2. **[in review]** `feat: expose max_concurrent_frames on SpoeForge` — constructor plumbing, constants entry,
-   README feature note, `_find_common_capabilities` comment fix.
-3. `chore: validate pipelining end-to-end in docker harness` — slow-handler variant in
-   `docker/sample_server.py`, concurrent-request validation against real HAProxy, record results
-   here.
+2. **[merged, PR #31]** `feat: expose max_concurrent_frames on SpoeForge` — constructor plumbing,
+   constants entry, README feature note, `_find_common_capabilities` comment fix.
+3. **[in review]** `chore: validate pipelining end-to-end in docker harness` — slow-handler variant
+   in `docker/sample_server.py`, concurrent-request validation against real HAProxy. Results below.
+
+## Validation results (2026-07-24, docker harness)
+
+Setup: async slow-path handler (0.5s when user-agent contains "slow"), harness backend switched to
+`mode spop` (the modern engine; `mode tcp` is the legacy shape), agent debug logging on.
+
+- **No head-of-line blocking end-to-end**: with a slow request in flight, a concurrent fast
+  request completed in ~6ms vs the slow one's ~514ms, against both HAProxy 3.3 and 2.8. Under the
+  old serial agent this was impossible on a shared connection.
+- **Capability negotiation and connection reuse verified**: pipelining negotiated on every
+  handshake; warm connections are reused with incrementing stream ids (NOTIFYs with stream_id=3
+  observed on reused connections).
+- **How HAProxy actually exercises pipelining**: both engines prefer opening/reusing
+  *connections* over stacking concurrent frames onto a busy one. HAProxy 3.3's SPOP mux supports
+  20 streams/connection when the agent advertises pipelining (`mux_spop.c`: `streams_limit = 20`
+  gated on `SPOE_FL_PIPELINING`) but only returns connections to the shared avail list on stream
+  detach, so independent client sessions land on separate connections. HAProxy 2.8's legacy
+  applet engine behaves the same for independent sessions (capping `maxconn 1` queues rather than
+  interleaves).
+- **Conclusion**: agent-side concurrent pipelining is exercised deterministically by the unit
+  tests (two NOTIFYs on one connection, ACKs asserted out of completion order) and stands ready
+  for peers that stack frames — which the spec allows and HAProxy's mux is built for — while
+  current HAProxy versions primarily spread concurrent load across connections. Either way the
+  agent no longer serializes anything, and in-flight work is bounded per connection. No further
+  agent-side changes indicated.
 
 ## Deferred
 
