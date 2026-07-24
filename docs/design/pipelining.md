@@ -56,9 +56,10 @@ whole connection at ~20 req/s regardless of how many streams HAProxy multiplexes
   stop reading, cancel outstanding handler tasks, send AGENT-DISCONNECT, close. The spec wants the
   disconnect reply "as soon as possible", and HAProxy is abandoning those streams anyway —
   draining them would spend work nobody will read.
-- **D6 — `max_concurrent_frames` is handler config, not negotiation state.** It is not a
-  negotiated value, so it is passed to `ForgeHandler` directly (constructor arg, default from
-  `server/constants.py`), not stored on `ServerConfiguration`.
+- **D6 — `max_concurrent_frames` lives on `ServerConfiguration`.** Amended in review (mjo,
+  2026-07-24). Originally handler-level since it isn't negotiated, but `ServerConfiguration`
+  already carries agent-configured, pre-negotiation inputs (`max_frame_size`), and the handler
+  reads all other per-connection config from it — one config channel beats two.
 - **D7 — ACK-send failure inside a task logs and ends the task** (as `send_frame` does today when
   the stream is closing); the read loop discovers the dead connection via EOF/reset. No separate
   signaling channel.
@@ -93,8 +94,9 @@ sequenceDiagram
 
 ## Concrete shape
 
-- `server/constants.py`: `DEFAULT_MAX_CONCURRENT_FRAMES: Final[int] = <O2>`
-- `ForgeHandler.__init__(..., max_concurrent_frames: int = DEFAULT_MAX_CONCURRENT_FRAMES)`
+- `server/constants.py`: `DEFAULT_MAX_CONCURRENT_FRAMES = 100`
+- `ServerConfiguration(max_frame_size, max_concurrent_frames)`; handler reads
+  `config.max_concurrent_frames`
 - `core_handler`: handshake unchanged; then
   `limit = max_concurrent_frames if "pipelining" in config.capabilities else 1`;
   TaskGroup{ read loop: acquire sem → `Frame.decode` → control frames inline / NOTIFY → spawn

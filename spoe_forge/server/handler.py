@@ -7,8 +7,8 @@ from typing import Awaitable
 
 from spoe_forge.exception import SpoeForgeError
 from spoe_forge.server.configuration import ServerConfiguration
-from spoe_forge.server.constants import DEFAULT_MAX_CONCURRENT_FRAMES
 from spoe_forge.server.constants import DisconnectCode
+from spoe_forge.server.exceptions import CloseConnection
 from spoe_forge.spop.constants import FrameType
 from spoe_forge.spop.exception import SpopEncodeError
 from spoe_forge.spop.exception import SpopEOFError
@@ -20,10 +20,6 @@ from spoe_forge.spop.frame import Notify
 from spoe_forge.spop.spop_types import Action, Messages
 
 logger = logging.getLogger(__name__)
-
-
-class _CloseConnection(Exception):
-    """Control-flow signal: stop reading and cancel in-flight NOTIFY tasks."""
 
 
 class ForgeHandler:
@@ -39,7 +35,6 @@ class ForgeHandler:
         config: ServerConfiguration,
         reader: StreamReader,
         writer: StreamWriter,
-        max_concurrent_frames: int = DEFAULT_MAX_CONCURRENT_FRAMES,
     ):
         """
         Initialize connection handler.
@@ -48,14 +43,11 @@ class ForgeHandler:
         :param ServerConfiguration config: Configuration for this connection
         :param StreamReader reader: AsyncIO stream reader for connection
         :param StreamWriter writer: AsyncIO stream writer for connection
-        :param int max_concurrent_frames: Bound on concurrently processed NOTIFY
-            frames when pipelining is negotiated
         """
         self.notify_handler = notify_handler
         self.config = config
         self.reader = reader
         self.writer = writer
-        self.max_concurrent_frames = max_concurrent_frames
 
     async def close_connection(self):
         """Close the connection stream and wait for it to close."""
@@ -210,7 +202,7 @@ class ForgeHandler:
 
         :param asyncio.TaskGroup tg: Task group owning the NOTIFY tasks
         :param asyncio.Semaphore slots: Per-connection concurrency bound
-        :raises _CloseConnection: When the connection should close gracefully
+        :raises CloseConnection: When the connection should close gracefully
         """
         while True:
             await slots.acquire()
@@ -219,7 +211,7 @@ class ForgeHandler:
                 frame = await Frame.decode(self.reader, self.config.max_frame_size)
             except SpopEOFError:
                 logger.debug("Stream disconnected with EOF")
-                raise _CloseConnection()
+                raise CloseConnection()
 
             if isinstance(frame, Disconnect):
                 if frame.status_code == DisconnectCode.NORMAL:
@@ -233,14 +225,14 @@ class ForgeHandler:
                     status_code=DisconnectCode.NORMAL,
                     message="Disconnecting normally",
                 )
-                raise _CloseConnection()
+                raise CloseConnection()
 
             if not isinstance(frame, Notify):
                 await self.send_disconnect_on_error(
                     status_code=DisconnectCode.INVALID_FRAME_RECEIVED,
                     message=f"Expected NOTIFY or HAPROXY_DISCONNECT, received {frame.frame_type.name}",
                 )
-                raise _CloseConnection()
+                raise CloseConnection()
 
             tg.create_task(self._process_notify(frame, slots))
 
@@ -259,16 +251,16 @@ class ForgeHandler:
         try:
             async with asyncio.TaskGroup() as tg:
                 if not await self.handle_handshake():
-                    raise _CloseConnection()
+                    raise CloseConnection()
 
                 limit = (
-                    self.max_concurrent_frames
+                    self.config.max_concurrent_frames
                     if "pipelining" in self.config.capabilities
                     else 1
                 )
                 await self._read_frames(tg, asyncio.Semaphore(limit))
 
-        except* _CloseConnection:
+        except* CloseConnection:
             pass
 
         except* SpopFrameTooBigError as eg:
