@@ -63,7 +63,9 @@ class SetVarAction:
     Attributes:
         scope: Where to store the variable (SESSION, TRANSACTION, REQUEST, RESPONSE)
         name: Variable name (will be prefixed with scope in HAProxy, e.g., sess.user_authenticated)
-        value: Value to set (int, str, bool, bytes, IPv4Address, IPv6Address)
+        value: Value to set (int, str, bool, bytes, IPv4Address, IPv6Address).
+               str values must be latin-1-encodable (codepoints <= 255); pass
+               arbitrary text as UTF-8 bytes instead.
     """
 
     scope: ActionScope

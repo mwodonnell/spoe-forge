@@ -114,7 +114,7 @@ async def test_send_frame_raises_when_frame_too_big():
 
 
 @pytest.mark.asyncio
-async def test_send_frame_returns_false_on_encode_error():
+async def test_send_frame_raises_on_encode_error():
     handler, reader, writer = create_handler()
 
     test_frame = Frame.construct(
@@ -124,15 +124,11 @@ async def test_send_frame_returns_false_on_encode_error():
         actions=[],
     )
 
-    with (
-        patch.object(test_frame, "encode", side_effect=SpopEncodeError("boom")),
-        patch("spoe_forge.server.handler.logger") as mock_logger,
-    ):
-        result = await handler.send_frame(test_frame)
+    with patch.object(test_frame, "encode", side_effect=SpopEncodeError("boom")):
+        with pytest.raises(SpopEncodeError):
+            await handler.send_frame(test_frame)
 
-        assert result is False
-        writer.write.assert_not_called()
-        mock_logger.warning.assert_called_once()
+    writer.write.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -487,20 +483,90 @@ async def test_disconnect_cancels_in_flight_tasks():
 
 
 @pytest.mark.asyncio
-async def test_task_frame_too_big_disconnects_connection():
+async def test_oversized_ack_salvages_fitting_actions():
     async def notify_handler(messages):
-        return [SetVarAction(scope=ActionScope.SESSION, name="big", value="x" * 5000)]
+        if messages[0][1]["id"] == 1:
+            return [
+                SetVarAction(scope=ActionScope.SESSION, name="big", value="x" * 5000),
+                SetVarAction(scope=ActionScope.SESSION, name="kept", value=1),
+            ]
+        return [SetVarAction(scope=ActionScope.SESSION, name="ok", value=1)]
+
+    handler, reader, writer = create_handler(notify_handler)
+    handler.reader = _open_reader(_hello_bytes() + _notify_bytes(1))
+
+    with patch("spoe_forge.server.handler.logger") as mock_logger:
+        task = asyncio.create_task(handler.core_handler())
+        await _wait_until(lambda: writer.write.call_count >= 2)
+
+        # Connection survived - a subsequent NOTIFY is still served normally
+        handler.reader.feed_data(_notify_bytes(2))
+        await _wait_until(lambda: writer.write.call_count >= 3)
+        handler.reader.feed_eof()
+        await asyncio.wait_for(task, timeout=2)
+
+        assert any(
+            "salvageable actions" in str(call)
+            for call in mock_logger.error.call_args_list
+        )
+
+    frames = await _written_frames(writer)
+    acks = [f for f in frames if isinstance(f, Ack)]
+    assert [(a.metadata.stream_id, a.actions) for a in acks] == [
+        (1, [SetVarAction(scope=ActionScope.SESSION, name="kept", value=1)]),
+        (2, [SetVarAction(scope=ActionScope.SESSION, name="ok", value=1)]),
+    ]
+    assert not any(isinstance(f, Disconnect) for f in frames)
+
+
+@pytest.mark.asyncio
+async def test_unencodable_ack_salvages_encodable_actions():
+    async def notify_handler(messages):
+        return [
+            SetVarAction(scope=ActionScope.SESSION, name="v", value="hi \U0001f600"),
+            SetVarAction(scope=ActionScope.SESSION, name="kept", value=1),
+        ]
+
+    handler, reader, writer = create_handler(notify_handler)
+    handler.reader = _open_reader(_hello_bytes() + _notify_bytes(1))
+
+    with patch("spoe_forge.server.handler.logger") as mock_logger:
+        task = asyncio.create_task(handler.core_handler())
+        await _wait_until(lambda: writer.write.call_count >= 2)
+        handler.reader.feed_eof()
+        await asyncio.wait_for(task, timeout=2)
+
+        assert any(
+            "Dropping unencodable action" in str(call)
+            for call in mock_logger.error.call_args_list
+        )
+
+    frames = await _written_frames(writer)
+    acks = [f for f in frames if isinstance(f, Ack)]
+    assert [(a.metadata.stream_id, a.actions) for a in acks] == [
+        (1, [SetVarAction(scope=ActionScope.SESSION, name="kept", value=1)])
+    ]
+
+
+@pytest.mark.asyncio
+async def test_ack_with_no_salvageable_actions_is_empty():
+    async def notify_handler(messages):
+        return [
+            SetVarAction(scope=ActionScope.SESSION, name="v", value="hi \U0001f600")
+        ]
 
     handler, reader, writer = create_handler(notify_handler)
     handler.reader = _open_reader(_hello_bytes() + _notify_bytes(1))
 
     with patch("spoe_forge.server.handler.logger"):
-        await asyncio.wait_for(handler.core_handler(), timeout=2)
+        task = asyncio.create_task(handler.core_handler())
+        await _wait_until(lambda: writer.write.call_count >= 2)
+        handler.reader.feed_eof()
+        await asyncio.wait_for(task, timeout=2)
 
     frames = await _written_frames(writer)
-    assert isinstance(frames[-1], Disconnect)
-    assert frames[-1].status_code == DisconnectCode.FRAME_TOO_BIG
-    writer.close.assert_called_once()
+    acks = [f for f in frames if isinstance(f, Ack)]
+    assert [(a.metadata.stream_id, a.actions) for a in acks] == [(1, [])]
 
 
 @pytest.mark.asyncio
@@ -519,7 +585,8 @@ async def test_core_handler_handles_spoeforge_error():
 
 
 @pytest.mark.asyncio
-async def test_core_handler_handles_connection_reset():
+@pytest.mark.parametrize("teardown_error", [ConnectionResetError, BrokenPipeError])
+async def test_core_handler_handles_peer_teardown(teardown_error):
     handler, reader, writer = create_handler()
 
     haproxy_hello = Frame.construct(
@@ -533,14 +600,13 @@ async def test_core_handler_handles_connection_reset():
     )
 
     with (
-        patch.object(
-            Frame, "decode", side_effect=[haproxy_hello, ConnectionResetError()]
-        ),
+        patch.object(Frame, "decode", side_effect=[haproxy_hello, teardown_error()]),
         patch("spoe_forge.server.handler.logger") as mock_logger,
     ):
         await handler.core_handler()
 
         writer.close.assert_called_once()
         assert any(
-            "Connection reset" in str(call) for call in mock_logger.debug.call_args_list
+            "Connection closed by HAProxy" in str(call)
+            for call in mock_logger.debug.call_args_list
         )

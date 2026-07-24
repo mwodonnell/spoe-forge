@@ -190,7 +190,7 @@ async def test_encode_raises_on_size_limit():
         messages=large_messages,
     )
 
-    with pytest.raises(SpopFrameTooBigError, match="frame size .* exceeds max"):
+    with pytest.raises(SpopFrameTooBigError, match="Frame size .* exceeds maximum"):
         frame.encode(max_frame_size=100)  # Very small max size
 
 
@@ -203,7 +203,7 @@ async def test_decode_raises_on_oversized_frame():
 
 
 @pytest.mark.asyncio
-async def test_decode_accepts_frame_exactly_at_size_limit():
+async def test_decode_accepts_frame_len_exactly_at_size_limit():
     frame = Frame.construct(
         frame_type=FrameType.ACK,
         stream_id=1,
@@ -212,10 +212,56 @@ async def test_decode_accepts_frame_exactly_at_size_limit():
     )
 
     encoded = frame.encode(max_frame_size=16384)
+    frame_len = len(encoded) - 4  # max-frame-size excludes the length prefix
+
     reader = create_stream_reader(encoded)
-    decoded = await Frame.decode(reader, len(encoded))
+    decoded = await Frame.decode(reader, frame_len)
 
     assert isinstance(decoded, Ack)
+
+
+@pytest.mark.asyncio
+async def test_decode_rejects_frame_len_just_over_size_limit():
+    frame = Frame.construct(
+        frame_type=FrameType.ACK,
+        stream_id=1,
+        frame_id=1,
+        actions=[],
+    )
+
+    encoded = frame.encode(max_frame_size=16384)
+    frame_len = len(encoded) - 4
+
+    reader = create_stream_reader(encoded)
+    with pytest.raises(SpopFrameTooBigError):
+        await Frame.decode(reader, frame_len - 1)
+
+
+def test_encode_accepts_frame_exactly_at_size_limit():
+    frame = Frame.construct(
+        frame_type=FrameType.ACK,
+        stream_id=1,
+        frame_id=1,
+        actions=[],
+    )
+
+    frame_len = len(frame.encode(max_frame_size=16384)) - 4
+
+    assert frame.encode(max_frame_size=frame_len)
+
+
+def test_encode_rejects_frame_just_over_size_limit():
+    frame = Frame.construct(
+        frame_type=FrameType.ACK,
+        stream_id=1,
+        frame_id=1,
+        actions=[],
+    )
+
+    frame_len = len(frame.encode(max_frame_size=16384)) - 4
+
+    with pytest.raises(SpopFrameTooBigError):
+        frame.encode(max_frame_size=frame_len - 1)
 
 
 @pytest.mark.asyncio
